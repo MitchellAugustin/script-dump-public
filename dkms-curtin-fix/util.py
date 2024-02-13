@@ -81,8 +81,11 @@ def _subp(args, data=None, rcs=None, env=None, capture=False,
     except RuntimeError as e:
         raise RuntimeError("Unable to unshare pid (cmd=%s): %s" % (args, e))
 
-    args = unshare_args + sh_args + list(args)
-    #args = unshare_args + chroot_args + sh_args + list(args)
+    #args = unshare_args + sh_args + list(args)
+    args = unshare_args + chroot_args + sh_args + list(args)
+
+    LOG.debug("00366435: Original disable daemons")
+    disable_daemons_in_root(target)
 
     if not logstring:
         LOG.debug(
@@ -752,6 +755,7 @@ class ChrootableTarget(object):
                 self.umounts.append(tpath)
 
         if not self.allow_daemons:
+            LOG.debug("00366435: Original disable daemons")
             self.disabled_daemons = disable_daemons_in_root(self.target)
 
         rconf = paths.target_path(self.target, "/etc/resolv.conf")
