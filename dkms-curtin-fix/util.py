@@ -65,7 +65,7 @@ BASIC_MATCHER = re.compile(r'\$\{([A-Za-z0-9_.]+)\}|\$([A-Za-z0-9_.]+)')
 def _subp(args, data=None, rcs=None, env=None, capture=False,
           combine_capture=False, shell=False, logstring=False,
           decode="replace", target=None, cwd=None, log_captured=False,
-          unshare_pid=None):
+          unshare_pid=False):
     if rcs is None:
         rcs = [0]
     devnull_fp = None
@@ -203,7 +203,7 @@ def _get_unshare_pid_args(unshare_pid=None, target=None, euid=None):
     if os.path.ismount(target_proc):
         LOG.debug("00366435: It is, so unshare will use --mount-proc=%s", target_proc)
         # Mount /run/systemd to chroot so we can run systemd processes
-        subprocess.run(['mount', '-o', 'bind', '/run/systemd', f'{tpath}run/systemd'])
+        #subprocess.run(['mount', '-o', 'bind', '/run/systemd', f'{tpath}run/systemd'])
 
         return ['unshare', '--fork', '--pid', '--mount-proc=' + target_proc, '--']
     
