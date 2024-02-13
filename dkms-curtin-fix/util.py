@@ -65,7 +65,7 @@ BASIC_MATCHER = re.compile(r'\$\{([A-Za-z0-9_.]+)\}|\$([A-Za-z0-9_.]+)')
 def _subp(args, data=None, rcs=None, env=None, capture=False,
           combine_capture=False, shell=False, logstring=False,
           decode="replace", target=None, cwd=None, log_captured=False,
-          unshare_pid=False):
+          unshare_pid=None):
     if rcs is None:
         rcs = [0]
     devnull_fp = None
@@ -81,7 +81,8 @@ def _subp(args, data=None, rcs=None, env=None, capture=False,
     except RuntimeError as e:
         raise RuntimeError("Unable to unshare pid (cmd=%s): %s" % (args, e))
 
-    args = unshare_args + chroot_args + sh_args + list(args)
+    args = unshare_args + sh_args + list(args)
+    #args = unshare_args + chroot_args + sh_args + list(args)
 
     if not logstring:
         LOG.debug(
@@ -205,7 +206,8 @@ def _get_unshare_pid_args(unshare_pid=None, target=None, euid=None):
         # Mount /run/systemd to chroot so we can run systemd processes
         #subprocess.run(['mount', '-o', 'bind', '/run/systemd', f'{tpath}run/systemd'])
 
-        return ['unshare', '--fork', '--pid', '--mount-proc=' + target_proc, '--']
+        return ['systemd-nspawn', '--directory=' + tpath, '--as-pid2', '--']
+        #return ['unshare', '--fork', '--pid', '--mount-proc=' + target_proc, '--']
     
     LOG.debug("00366435: It's not, using normal behavior")
     
