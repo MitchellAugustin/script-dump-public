@@ -84,7 +84,7 @@ def _subp(args, data=None, rcs=None, env=None, capture=False,
     #args = unshare_args + sh_args + list(args)
     args = unshare_args + chroot_args + sh_args + list(args)
 
-    LOG.debug("00366435: Original disable daemons")
+    LOG.debug("00366435: New disable daemons")
     disable_daemons_in_root(target)
 
     if not logstring:
