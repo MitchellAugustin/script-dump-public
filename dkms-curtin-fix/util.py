@@ -206,8 +206,8 @@ def _get_unshare_pid_args(unshare_pid=None, target=None, euid=None):
         # Mount /run/systemd to chroot so we can run systemd processes
         #subprocess.run(['mount', '-o', 'bind', '/run/systemd', f'{tpath}run/systemd'])
 
-        return ['systemd-nspawn', '--directory=' + tpath, '--as-pid2', '--']
-        #return ['unshare', '--fork', '--pid', '--mount-proc=' + target_proc, '--']
+        #return ['systemd-nspawn', '--directory=' + tpath, '--as-pid2', '--']
+        return ['unshare', '--fork', '--pid', '--mount-proc=' + target_proc, '--']
     
     LOG.debug("00366435: It's not, using normal behavior")
     
