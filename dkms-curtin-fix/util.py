@@ -2,7 +2,7 @@
 
 import argparse
 import collections
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 import errno
 import json
 import os
@@ -16,6 +16,9 @@ import stat
 import sys
 import tempfile
 import time
+from typing import Dict, List, Optional
+
+import attr
 
 # avoid the dependency to python3-six as used in cloud-init
 try:
@@ -60,6 +63,11 @@ _DNS_REDIRECT_IP = None
 
 # matcher used in template rendering functions
 BASIC_MATCHER = re.compile(r'\$\{([A-Za-z0-9_.]+)\}|\$([A-Za-z0-9_.]+)')
+
+
+class NotExclusiveError(OSError):
+    ''' Exception to raise when an exclusive open (i.e, O_EXCL) fails with
+    EBUSY '''
 
 
 def _subp(args, data=None, rcs=None, env=None, capture=False,
@@ -198,13 +206,13 @@ def _get_unshare_pid_args(unshare_pid=None, target=None, euid=None):
 
     target_proc = os.path.join(tpath, 'proc')
 
-    LOG.debug("00366435: Checking if target_proc (%s) is a mount", target_proc)
+    LOG.debug("Checking if target_proc (%s) is a mount", target_proc)
 
     if os.path.ismount(target_proc):
-        LOG.debug("00366435: It is, so unshare will use --mount-proc=%s", target_proc)
+        LOG.debug("It is, so unshare will use --mount-proc=%s", target_proc)
         return ['unshare', '--fork', '--pid', '--mount-proc=' + target_proc, '--']
 
-    LOG.debug("00366435: It's not, using normal behavior")
+    LOG.debug("It's not, using normal behavior")
 
     return ['unshare', '--fork', '--pid', '--']
 
@@ -347,10 +355,6 @@ def load_kernel_module(module, check_loaded=True):
 
     LOG.debug('Loading kernel module %s via modprobe', module)
     subp(['modprobe', '--use-blacklist', module])
-
-
-class BadUsage(Exception):
-    pass
 
 
 class ProcessExecutionError(IOError):
@@ -746,7 +750,7 @@ class ChrootableTarget(object):
             if do_mount(p, tpath, opts='--bind'):
                 self.umounts.append(tpath)
 
-        if not self.allow_daemons:
+        if self.target != "/" and not self.allow_daemons:
             self.disabled_daemons = disable_daemons_in_root(self.target)
 
         rconf = paths.target_path(self.target, "/etc/resolv.conf")
@@ -888,12 +892,6 @@ def get_paths(curtin_exe=None, lib=None, helpers=None):
     return {'curtin_exe': curtin_exe, 'lib': mydir, 'helpers': helpers}
 
 
-def find_newer(src, files):
-    mtime = os.stat(src).st_mtime
-    return [f for f in files if
-            os.path.exists(f) and os.stat(f).st_mtime > mtime]
-
-
 def set_unexecutable(fname, strict=False):
     """set fname so it is not executable.
 
@@ -916,63 +914,104 @@ def is_uefi_bootable():
     return os.path.exists('/sys/firmware/efi') is True
 
 
-def parse_efibootmgr(content):
-    efikey_to_dict_key = {
+class EFIVarFSBug:
+    """A regression was introduced in the Linux 6.5 kernel affecting systems
+    where the QueryVariableInfo UEFI function is not available. This includes
+    various systems with Apple hardware.
+    On affected systems, calls to statfs("/sys/firmware/efi/efivars") fail
+    with EINVAL. As a consequence, libefivar (and therefore efibootmgr!) assume
+    that EFI variables are not supported.
+
+    Command: ['efibootmgr', '-v']
+    Exit code: 2
+    Reason: -
+    Stdout: ''
+    Stderr: EFI variables are not supported on this system.
+
+    Fortunately, libefivar supports the LIBEFIVAR_OPS variable, which can be
+    used to "force" the library to use "/sys/firmware/efi/efivars" without
+    relying on statfs(2).
+
+    See LP: #2040190"""
+    @staticmethod
+    def is_system_affected() -> bool:
+        """Try to determine is the bug affects the current system."""
+        try:
+            os.statvfs("/sys/firmware/efi/efivars")
+        except OSError as ose:
+            if ose.errno == errno.EINVAL:
+                return True
+        except Exception:
+            pass
+        return False
+
+    @staticmethod
+    def apply_workaround() -> None:
+        os.environ["LIBEFIVAR_OPS"] = "efivarfs"
+
+    @staticmethod
+    def apply_workaround_if_affected() -> None:
+        if EFIVarFSBug.is_system_affected():
+            LOG.warning("current system seems affected by statfs efivarfs bug")
+            EFIVarFSBug.apply_workaround()
+
+
+@attr.s(auto_attribs=True)
+class EFIBootEntry:
+    name: str
+    path: str
+
+
+@attr.s(auto_attribs=True)
+class EFIBootState:
+    current: str
+    timeout: str
+    order: List[str]
+    entries: Dict[str, EFIBootEntry] = attr.ib(default=attr.Factory(dict))
+
+
+EFI_BOOT_ENTRY_LINE_REGEXP = \
+  r"^Boot(?P<entry>[0-9a-fA-F]{4})\*?\s(?P<name>.+)\t(?P<path>.*)$"
+
+
+def parse_efibootmgr(content: str) -> EFIBootState:
+    efikey_to_attr = {
         'BootCurrent': 'current',
         'Timeout': 'timeout',
         'BootOrder': 'order',
     }
 
-    output = {}
+    args = {'current': '', 'timeout': '', 'order': ''}
+
     for line in content.splitlines():
         split = line.split(':')
-        if len(split) == 2:
-            key = split[0].strip()
-            output_key = efikey_to_dict_key.get(key, None)
-            if output_key:
-                output[output_key] = split[1].strip()
-                if output_key == 'order':
-                    output[output_key] = output[output_key].split(',')
-    output['entries'] = {
-        entry: {
-            'name': name.strip(),
-            'path': path.strip(),
-        }
-        for entry, name, path in re.findall(
-            r"^Boot(?P<entry>[0-9a-fA-F]{4})\*?\s(?P<name>.+)\t"
-            r"(?P<path>.*)$",
-            content, re.MULTILINE)
-    }
-    if 'order' in output:
-        new_order = [item for item in output['order']
-                     if item in output['entries']]
-        output['order'] = new_order
-    return output
+        if len(split) != 2:
+            continue
+        key, val = split
+        attr = efikey_to_attr.get(key.strip())
+        if not attr:
+            continue
+        args[attr] = val.strip()
+
+    print(args)
+    args['order'] = args['order'].split(',')
+
+    state = EFIBootState(**args)
+
+    for line in content.splitlines():
+        match = re.match(EFI_BOOT_ENTRY_LINE_REGEXP, line)
+        if match is None:
+            continue
+        state.entries[match['entry']] = EFIBootEntry(
+            name=match['name'].strip(), path=match['path'].strip())
+
+    state.order = [item for item in state.order if item in state.entries]
+
+    return state
 
 
-def get_efibootmgr(target=None):
-    """Return mapping of EFI information.
-
-    Calls `efibootmgr` inside the `target`.
-
-    Example output:
-        {
-            'current': '0000',
-            'timeout': '1 seconds',
-            'order': ['0000', '0001'],
-            'entries': {
-                '0000': {
-                    'name': 'ubuntu',
-                    'path': (
-                        'HD(1,GPT,0,0x8,0x1)/File(\\EFI\\ubuntu\\shimx64.efi)'),
-                },
-                '0001': {
-                    'name': 'UEFI:Network Device',
-                    'path': 'BBS(131,,0x0)',
-                }
-            }
-        }
-    """
+def get_efibootmgr(target: Optional[str] = None) -> EFIBootState:
+    """Return information about current EFI boot state."""
     with ChrootableTarget(target=target) as in_chroot:
         stdout, _ = in_chroot.subp(['efibootmgr', '-v'], capture=True)
         output = parse_efibootmgr(stdout)
@@ -1332,5 +1371,12 @@ def uses_systemd():
         _USES_SYSTEMD = os.path.isdir('/run/systemd/system')
 
     return _USES_SYSTEMD
+
+
+def not_exclusive_retry(fun, *args, **kwargs):
+    with suppress(NotExclusiveError):
+        return fun(*args, **kwargs)
+    time.sleep(1)
+    return fun(*args, **kwargs)
 
 # vi: ts=4 expandtab syntax=python
