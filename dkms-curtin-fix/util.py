@@ -81,12 +81,7 @@ def _subp(args, data=None, rcs=None, env=None, capture=False,
     except RuntimeError as e:
         raise RuntimeError("Unable to unshare pid (cmd=%s): %s" % (args, e))
 
-    #args = unshare_args + sh_args + list(args)
     args = unshare_args + chroot_args + sh_args + list(args)
-
-    LOG.debug("00366435: New disable daemons")
-
-    #disable_daemons_in_root(target)
 
     if not logstring:
         LOG.debug(
@@ -200,21 +195,17 @@ def _get_unshare_pid_args(unshare_pid=None, target=None, euid=None):
     if not _has_unshare_pid():
         raise RuntimeError(
             "given unshare_pid=%s but no unshare command." % unshare_pid_in)
-        
+
     target_proc = os.path.join(tpath, 'proc')
-    
+
     LOG.debug("00366435: Checking if target_proc (%s) is a mount", target_proc)
 
     if os.path.ismount(target_proc):
         LOG.debug("00366435: It is, so unshare will use --mount-proc=%s", target_proc)
-        # Mount /run/systemd to chroot so we can run systemd processes
-        #subprocess.run(['mount', '-o', 'bind', '/run/systemd', f'{tpath}run/systemd'])
-
-        #return ['systemd-nspawn', '--directory=' + tpath, '--as-pid2', '--']
         return ['unshare', '--fork', '--pid', '--mount-proc=' + target_proc, '--']
-    
+
     LOG.debug("00366435: It's not, using normal behavior")
-    
+
     return ['unshare', '--fork', '--pid', '--']
 
 
@@ -756,7 +747,6 @@ class ChrootableTarget(object):
                 self.umounts.append(tpath)
 
         if not self.allow_daemons:
-            LOG.debug("00366435: Original disable daemons")
             self.disabled_daemons = disable_daemons_in_root(self.target)
 
         rconf = paths.target_path(self.target, "/etc/resolv.conf")
