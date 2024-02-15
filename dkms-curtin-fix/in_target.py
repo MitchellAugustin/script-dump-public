@@ -66,7 +66,7 @@ def in_target_main(args):
             ret = pty.spawn(cmd)  # pylint: disable=E1111
             if ret is not None:
                 exit = int(ret / 256)
-        chroot.subp(['mv', '/usr/bin/ischroot.old', '/usr/bin/ischroot'])
+        #chroot.subp(['mv', '/usr/bin/ischroot.old', '/usr/bin/ischroot'])
         sys.exit(exit)
 
 
