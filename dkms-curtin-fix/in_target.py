@@ -46,10 +46,6 @@ def in_target_main(args):
         daemons = True
     cmd = args.command_args
     with util.ChrootableTarget(target, allow_daemons=daemons) as chroot:
-        # Symlink true to ischroot since we may be in separate PID
-        # namespace, which can throw off ischroot
-        #chroot.subp(['cp', '/usr/bin/ischroot', '/usr/bin/ischroot.old'])
-        #chroot.subp(['ln', '-sf', '/usr/bin/true', '/usr/bin/ischroot'])
         exit = 0
         if not args.interactive:
             try:
@@ -66,7 +62,6 @@ def in_target_main(args):
             ret = pty.spawn(cmd)  # pylint: disable=E1111
             if ret is not None:
                 exit = int(ret / 256)
-        #chroot.subp(['mv', '/usr/bin/ischroot.old', '/usr/bin/ischroot'])
         sys.exit(exit)
 
 
