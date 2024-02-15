@@ -48,8 +48,8 @@ def in_target_main(args):
     with util.ChrootableTarget(target, allow_daemons=daemons) as chroot:
         # Symlink true to ischroot since we may be in separate PID
         # namespace, which can throw off ischroot
-        chroot.subp(['cp', '/usr/bin/ischroot', '/usr/bin/ischroot.old'])
-        chroot.subp(['ln', '-sf', '/usr/bin/true', '/usr/bin/ischroot'])
+        #chroot.subp(['cp', '/usr/bin/ischroot', '/usr/bin/ischroot.old'])
+        #chroot.subp(['ln', '-sf', '/usr/bin/true', '/usr/bin/ischroot'])
         exit = 0
         if not args.interactive:
             try:
