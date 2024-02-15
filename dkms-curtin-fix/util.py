@@ -779,8 +779,9 @@ class ChrootableTarget(object):
 
         # Symlink true to ischroot since we may be in separate PID
         # namespace, which can throw off ischroot
-        log_call(subp, ['cp', '/usr/bin/ischroot', '/usr/bin/ischroot.old'])
-        log_call(subp, ['ln', '-sf', '/usr/bin/true', '/usr/bin/ischroot'])
+        ischroot_mount_path = paths.target_path(self.target, '/usr/bin/ischroot')
+        if do_mount('/usr/bin/true', ischroot_mount_path):
+            self.umounts.append(ischroot_mount_path)
 
         return self
 
@@ -800,9 +801,6 @@ class ChrootableTarget(object):
             if self.rc_tmp and os.path.lexists(self.rc_tmp):
                 os.rename(os.path.join(self.rconf_d, "resolv.conf"), rconf)
             shutil.rmtree(self.rconf_d)
-
-        # Remove symlink from ischroot to true
-        log_call(subp, ['mv', '/usr/bin/ischroot.old', '/usr/bin/ischroot'])
 
     def subp(self, *args, **kwargs):
         kwargs['target'] = self.target
