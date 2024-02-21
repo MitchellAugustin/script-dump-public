@@ -779,8 +779,9 @@ class ChrootableTarget(object):
 
         # Symlink true to ischroot since we may be in separate PID
         # namespace, which can throw off ischroot
+        true_mount_path = paths.target_path(self.target, '/usr/bin/true')
         ischroot_mount_path = paths.target_path(self.target, '/usr/bin/ischroot')
-        if do_mount('/usr/bin/true', ischroot_mount_path, opts='--bind'):
+        if do_mount(true_mount_path, ischroot_mount_path, opts='--bind'):
             self.umounts.append(ischroot_mount_path)
 
         return self
