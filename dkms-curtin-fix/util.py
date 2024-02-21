@@ -781,7 +781,8 @@ class ChrootableTarget(object):
         # namespace, which can throw off ischroot
         true_mount_path = paths.target_path(self.target, '/usr/bin/true')
         ischroot_mount_path = paths.target_path(self.target, '/usr/bin/ischroot')
-        if do_mount(true_mount_path, ischroot_mount_path, opts='--bind'):
+        true_exists = os.path.isfile(true_mount_path)
+        if true_exists and do_mount(true_mount_path, ischroot_mount_path, opts='--bind'):
             self.umounts.append(ischroot_mount_path)
 
         return self
