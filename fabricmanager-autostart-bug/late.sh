@@ -104,7 +104,7 @@ install_mellanox_ofed() {
 }
 
 install_fabric_manager() {
-    apt install -y nvidia-fabricmanager-${NVIDIA_DRIVER_VERSION%-server}
+    apt install -y nvidia-fabricmanager-525-server
     #systemctl enable nvidia-fabricmanager
 }
 
