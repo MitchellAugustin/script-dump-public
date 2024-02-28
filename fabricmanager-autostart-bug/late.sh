@@ -12,10 +12,10 @@ install_gpu_drivers() {
         # When bumping the version, you may need to update the corresponding a-c-t test job i.e.
         # - autotest-client-tests/ubuntu_nvidia_fs/nvidia-fs/00-vars
         18.04|20.04)
-            NVIDIA_DRIVER_VERSION=470-server
+            NVIDIA_DRIVER_VERSION=470
             ;;
         *)
-            NVIDIA_DRIVER_VERSION=525-server
+            NVIDIA_DRIVER_VERSION=525
             ;;
     esac
 
