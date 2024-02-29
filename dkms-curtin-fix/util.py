@@ -210,7 +210,8 @@ def _get_unshare_pid_args(unshare_pid=None, target=None, euid=None):
 
     if os.path.ismount(target_proc):
         LOG.debug("It is, so unshare will use --mount-proc=%s", target_proc)
-        return ['unshare', '--fork', '--pid', '--mount-proc=' + target_proc, '--']
+        return ['unshare', '--fork', '--pid', '--mount-proc=' +
+                target_proc, '--']
 
     LOG.debug("It's not, using normal behavior")
 
@@ -780,9 +781,11 @@ class ChrootableTarget(object):
         # Symlink true to ischroot since we may be in separate PID
         # namespace, which can throw off ischroot
         true_mount_path = paths.target_path(self.target, '/usr/bin/true')
-        ischroot_mount_path = paths.target_path(self.target, '/usr/bin/ischroot')
+        ischroot_mount_path = paths.target_path(self.target,
+                                                '/usr/bin/ischroot')
         true_exists = os.path.isfile(true_mount_path)
-        if true_exists and do_mount(true_mount_path, ischroot_mount_path, opts='--bind'):
+        if true_exists and do_mount(true_mount_path, ischroot_mount_path,
+                                    opts='--bind'):
             self.umounts.append(ischroot_mount_path)
 
         return self
