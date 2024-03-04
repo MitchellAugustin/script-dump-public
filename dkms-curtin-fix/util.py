@@ -412,7 +412,7 @@ class ProcessExecutionError(IOError):
         IOError.__init__(self, message)
 
     def _indent_text(self, text):
-        if type(text) == bytes:
+        if isinstance(text, bytes):
             text = text.decode()
         return text.replace('\n', '\n' + ' ' * self.stdout_indent_level)
 
@@ -784,8 +784,10 @@ class ChrootableTarget(object):
         ischroot_mount_path = paths.target_path(self.target,
                                                 '/usr/bin/ischroot')
         true_exists = os.path.isfile(true_mount_path)
-        if true_exists and do_mount(true_mount_path, ischroot_mount_path,
-                                    opts='--bind'):
+        ischroot_exists = os.path.isfile(ischroot_mount_path)
+        both_exist = true_exists and ischroot_exists
+        if both_exist and do_mount(true_mount_path, ischroot_mount_path,
+                                   opts='--bind'):
             self.umounts.append(ischroot_mount_path)
 
         return self
@@ -1157,7 +1159,7 @@ def human2bytes(size):
     if int(val) != val:
         raise ValueError("'%s': resulted in non-integer (%s)" % (size_in, val))
 
-    return val
+    return int(val)
 
 
 def bytes2human(size):
