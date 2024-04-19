@@ -3,7 +3,6 @@ function checkCondition() {
     const element = document.getElementsByClassName("u-nudge-left").item(0);
     if (element && element.textContent.trim() === 'Releasing') {
         (new Audio("https://oneone.augustin.tech/files/beep.mp3")).play();
-        alert("Releasing!");
         clearInterval(intervalId); // Stop the interval
     }
     console.log("Polling for server release");
