@@ -6,8 +6,6 @@ USER root
 RUN apt update
 RUN apt -y install curl
 RUN curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.deb.sh | bash
-RUN curl -s https://packagecloud.io/install/repositories/ookla/speedtest-cli/script.deb.sh | bash
-RUN apt -y install speedtest
 RUN apt -y install sysbench
 RUN apt -y install fio
 
