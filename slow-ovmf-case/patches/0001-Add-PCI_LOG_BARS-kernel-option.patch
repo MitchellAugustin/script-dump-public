@@ -1,0 +1,136 @@
+From 93bd10a7248f38161fe7d4a1bbb76affcd34ba4e Mon Sep 17 00:00:00 2001
+From: Mitchell Augustin <mitchell.augustin@canonical.com>
+Date: Mon, 2 Dec 2024 15:05:37 -0600
+Subject: [PATCH] Add PCI_LOG_BARS kernel option
+
+---
+ arch/x86/include/asm/pci_x86.h |  1 +
+ arch/x86/pci/common.c          |  3 +++
+ drivers/pci/probe.c            | 39 +++++++++++++++++++++++-----------
+ 3 files changed, 31 insertions(+), 12 deletions(-)
+
+diff --git a/arch/x86/include/asm/pci_x86.h b/arch/x86/include/asm/pci_x86.h
+index 70533fdcbf02..f1848b120103 100644
+--- a/arch/x86/include/asm/pci_x86.h
++++ b/arch/x86/include/asm/pci_x86.h
+@@ -44,6 +44,7 @@ do {						\
+ #define PCI_BIG_ROOT_WINDOW	0x400000
+ #define PCI_USE_E820		0x800000
+ #define PCI_NO_E820		0x1000000
++#define PCI_LOG_BARS		0x2000000
+ 
+ extern unsigned int pci_probe;
+ extern unsigned long pirq_table_addr;
+diff --git a/arch/x86/pci/common.c b/arch/x86/pci/common.c
+index ddb798603201..b714e0324312 100644
+--- a/arch/x86/pci/common.c
++++ b/arch/x86/pci/common.c
+@@ -608,6 +608,9 @@ char *__init pcibios_setup(char *str)
+ 		pci_probe |= PCI_BIG_ROOT_WINDOW;
+ 		return NULL;
+ #endif
++	} else if (!strcmp(str, "use_bar_logs")) {
++		pci_probe |= PCI_LOG_BARS;
++		return NULL;
+ 	} else if (!strcmp(str, "routeirq")) {
+ 		pci_routeirq = 1;
+ 		return NULL;
+diff --git a/drivers/pci/probe.c b/drivers/pci/probe.c
+index 18707e1640e3..6c6d53878767 100644
+--- a/drivers/pci/probe.c
++++ b/drivers/pci/probe.c
+@@ -253,9 +253,13 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 	if (!sz64)
+ 		goto fail;
+ 
++	unsigned int log_bar = (pci_probe & PCI_LOG_BARS);
++
+ 	sz64 = pci_size(l64, sz64, mask64);
+ 	if (!sz64) {
+-		//pci_info(dev, FW_BUG "%s: invalid; can't size\n", res_name);
++		if (log_bar)
++			pci_info(dev, FW_BUG "%s: invalid; can't size\n", res_name);
++	
+ 		goto fail;
+ 	}
+ 
+@@ -265,8 +269,10 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 			res->flags |= IORESOURCE_UNSET | IORESOURCE_DISABLED;
+ 			res->start = 0;
+ 			res->end = 0;
+-			//pci_err(dev, "%s: can't handle BAR larger than 4GB (size %#010llx)\n",
+-			//	res_name, (unsigned long long)sz64);
++			if (log_bar) {
++				pci_err(dev, "%s: can't handle BAR larger than 4GB (size %#010llx)\n",
++					res_name, (unsigned long long)sz64);
++			}
+ 			goto out;
+ 		}
+ 
+@@ -275,8 +281,10 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 			res->flags |= IORESOURCE_UNSET;
+ 			res->start = 0;
+ 			res->end = sz64 - 1;
+-			//pci_info(dev, "%s: can't handle BAR above 4GB (bus address %#010llx)\n",
+-			//	 res_name, (unsigned long long)l64);
++			if (log_bar) {
++				pci_info(dev, "%s: can't handle BAR above 4GB (bus address %#010llx)\n",
++					 res_name, (unsigned long long)l64);
++			}
+ 			goto out;
+ 		}
+ 	}
+@@ -302,8 +310,10 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 		res->flags |= IORESOURCE_UNSET;
+ 		res->start = 0;
+ 		res->end = region.end - region.start;
+-		//pci_info(dev, "%s: initial BAR value %#010llx invalid\n",
+-		//	 res_name, (unsigned long long)region.start);
++		if (log_bar) {
++			pci_info(dev, "%s: initial BAR value %#010llx invalid\n",
++				 res_name, (unsigned long long)region.start);
++		}
+ 	}
+ 
+ 	goto out;
+@@ -312,8 +322,8 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ fail:
+ 	res->flags = 0;
+ out:
+-	//if (res->flags)
+-	//	pci_info(dev, "%s %pR\n", res_name, res);
++	if (res->flags && log_bar)
++		pci_info(dev, "%s %pR\n", res_name, res);
+ 
+ 	return (res->flags & IORESOURCE_MEM_64) ? 1 : 0;
+ }
+@@ -330,8 +340,14 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
+ 	if (dev->is_virtfn)
+ 		return;
+ 
++	if (!(pci_probe & PCI_LOG_BARS)) {
++		pci_info(dev, "%s: BAR info logging is being skipped while decoding is disabled. Enable pci=use_bar_logs if required.\n", res_name);
++	}
++
+ 	/* No printks while decoding is disabled! */
+-	if (!dev->mmio_always_on) {
++	// Only disable decoding here if we are NOT logging BAR info in
++	// __pci_read_base()
++	if (!dev->mmio_always_on && !(pci_probe & PCI_LOG_BARS)) {
+ 		pci_read_config_word(dev, PCI_COMMAND, &orig_cmd);
+ 		if (orig_cmd & PCI_COMMAND_DECODE_ENABLE) {
+ 			pci_write_config_word(dev, PCI_COMMAND,
+@@ -353,9 +369,8 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
+ 		__pci_read_base(dev, pci_bar_mem32, res, rom);
+ 	}
+ 
+-	if (!dev->mmio_always_on && (orig_cmd & PCI_COMMAND_DECODE_ENABLE))
++	if (!dev->mmio_always_on && (orig_cmd & PCI_COMMAND_DECODE_ENABLE) && !(pci_probe & PCI_LOG_BARS))
+ 		pci_write_config_word(dev, PCI_COMMAND, orig_cmd);
+-
+ }
+ 
+ static void pci_read_bridge_io(struct pci_dev *dev, struct resource *res,
+-- 
+2.43.0
+
