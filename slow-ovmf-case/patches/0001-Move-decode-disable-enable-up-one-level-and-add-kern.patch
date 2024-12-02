@@ -1,38 +1,50 @@
-From 2ed5df218ba5622f2331e8dac194a1f3572615df Mon Sep 17 00:00:00 2001
+From 945ffd5f4c61f31c40562b474f0a38e9be187b10 Mon Sep 17 00:00:00 2001
 From: Mitchell Augustin <mitchell.augustin@canonical.com>
 Date: Mon, 2 Dec 2024 13:43:21 -0600
 Subject: [PATCH] Move decode disable/enable up one level and add kernel opt
  for bar logging
 
 ---
- drivers/pci/pci.c   |  4 ++++
+ drivers/pci/pci.c   |  3 +++
+ drivers/pci/pci.h   |  1 +
  drivers/pci/probe.c | 37 +++++++++++++++++++++++++++++--------
- 2 files changed, 33 insertions(+), 8 deletions(-)
+ 3 files changed, 33 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
-index 225a6cd2e9ca..ac659cba2821 100644
+index 225a6cd2e9ca..38abbef8f254 100644
 --- a/drivers/pci/pci.c
 +++ b/drivers/pci/pci.c
-@@ -6876,6 +6876,8 @@ void __weak pci_fixup_cardbus(struct pci_bus *bus)
- }
- EXPORT_SYMBOL(pci_fixup_cardbus);
+@@ -159,6 +159,7 @@ static bool pcie_ats_disabled;
  
-+static bool bar_logging_enabled;
-+
- static int __init pci_setup(char *str)
+ /* If set, the PCI config space of each device is printed during boot. */
+ bool pci_early_dump;
++bool pci_bar_logging_enabled;
+ 
+ bool pci_ats_disabled(void)
  {
- 	while (str) {
-@@ -6936,6 +6938,8 @@ static int __init pci_setup(char *str)
+@@ -6936,6 +6937,8 @@ static int __init pci_setup(char *str)
  				disable_acs_redir_param = str + 18;
  			} else if (!strncmp(str, "config_acs=", 11)) {
  				config_acs_param = str + 11;
 +			} else if (!strncmp(str, "bar_logging_enabled", 19)) {
-+				bar_logging_enabled = true;
++				pci_bar_logging_enabled = true;
  			} else {
  				pr_err("PCI: Unknown option `%s'\n", str);
  			}
+diff --git a/drivers/pci/pci.h b/drivers/pci/pci.h
+index 14d00ce45bfa..e322e2c3b749 100644
+--- a/drivers/pci/pci.h
++++ b/drivers/pci/pci.h
+@@ -82,6 +82,7 @@
+ 
+ extern const unsigned char pcie_link_speed[];
+ extern bool pci_early_dump;
++extern bool pci_bar_logging_enabled;
+ 
+ bool pcie_cap_has_lnkctl(const struct pci_dev *dev);
+ bool pcie_cap_has_lnkctl2(const struct pci_dev *dev);
 diff --git a/drivers/pci/probe.c b/drivers/pci/probe.c
-index f1615805f5b0..95c3fdec44a5 100644
+index f1615805f5b0..6273b453fd42 100644
 --- a/drivers/pci/probe.c
 +++ b/drivers/pci/probe.c
 @@ -255,7 +255,8 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
@@ -40,7 +52,7 @@ index f1615805f5b0..95c3fdec44a5 100644
  	sz64 = pci_size(l64, sz64, mask64);
  	if (!sz64) {
 -		pci_info(dev, FW_BUG "%s: invalid; can't size\n", res_name);
-+		if (bar_logging_enabled) 
++		if (pci_bar_logging_enabled) 
 +			pci_info(dev, FW_BUG "%s: invalid; can't size\n", res_name);
  		goto fail;
  	}
@@ -51,7 +63,7 @@ index f1615805f5b0..95c3fdec44a5 100644
  			res->end = 0;
 -			pci_err(dev, "%s: can't handle BAR larger than 4GB (size %#010llx)\n",
 -				res_name, (unsigned long long)sz64);
-+			if(bar_logging_enabled) {
++			if(pci_bar_logging_enabled) {
 +				pci_err(dev, "%s: can't handle BAR larger than 4GB (size %#010llx)\n",
 +						res_name, (unsigned long long)sz64);
 +			}
@@ -64,7 +76,7 @@ index f1615805f5b0..95c3fdec44a5 100644
  			res->end = sz64 - 1;
 -			pci_info(dev, "%s: can't handle BAR above 4GB (bus address %#010llx)\n",
 -				 res_name, (unsigned long long)l64);
-+			if (bar_logging_enabled) {
++			if (pci_bar_logging_enabled) {
 +				pci_info(dev, "%s: can't handle BAR above 4GB (bus address %#010llx)\n",
 +						res_name, (unsigned long long)l64);
 +			}
@@ -77,7 +89,7 @@ index f1615805f5b0..95c3fdec44a5 100644
  		res->end = region.end - region.start;
 -		pci_info(dev, "%s: initial BAR value %#010llx invalid\n",
 -			 res_name, (unsigned long long)region.start);
-+		if (bar_logging_enabled) {
++		if (pci_bar_logging_enabled) {
 +			pci_info(dev, "%s: initial BAR value %#010llx invalid\n",
 +					res_name, (unsigned long long)region.start);
 +		}
@@ -89,7 +101,7 @@ index f1615805f5b0..95c3fdec44a5 100644
  	res->flags = 0;
  out:
 -	if (res->flags)
-+	if (res->flags && bar_logging_enabled)
++	if (res->flags && pci_bar_logging_enabled)
  		pci_info(dev, "%s %pR\n", res_name, res);
  
  	return (res->flags & IORESOURCE_MEM_64) ? 1 : 0;
