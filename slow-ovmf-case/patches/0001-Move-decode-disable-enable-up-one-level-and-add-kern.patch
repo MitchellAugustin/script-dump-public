@@ -1,4 +1,4 @@
-From ce996472903c0b0f935e9892c99d987ecfea7172 Mon Sep 17 00:00:00 2001
+From b37f59cbc5cb724d3d110b7c2520a20ea469a7db Mon Sep 17 00:00:00 2001
 From: Mitchell Augustin <mitchell.augustin@canonical.com>
 Date: Mon, 2 Dec 2024 13:43:21 -0600
 Subject: [PATCH] Move decode disable/enable up one level and add kernel opt
@@ -61,7 +61,7 @@ index 14d00ce45bfa..e322e2c3b749 100644
  bool pcie_cap_has_lnkctl(const struct pci_dev *dev);
  bool pcie_cap_has_lnkctl2(const struct pci_dev *dev);
 diff --git a/drivers/pci/probe.c b/drivers/pci/probe.c
-index f1615805f5b0..96f8fd4bb22b 100644
+index f1615805f5b0..42fa63e9f5e4 100644
 --- a/drivers/pci/probe.c
 +++ b/drivers/pci/probe.c
 @@ -255,7 +255,8 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
@@ -136,7 +136,7 @@ index f1615805f5b0..96f8fd4bb22b 100644
  
 +	/* No printks while decoding is disabled! */
 +	if (!dev->mmio_always_on && !pci_bar_logging_enabled) {
-+		dev_info(dev, "BAR info logging disabled - enable with pci=bar_logging_enabled\n");
++		pci_info(dev, "BAR info logging disabled - enable with pci=bar_logging_enabled\n");
 +		pci_read_config_word(dev, PCI_COMMAND, &orig_cmd);
 +		if (orig_cmd & PCI_COMMAND_DECODE_ENABLE) {
 +			pci_write_config_word(dev, PCI_COMMAND,
