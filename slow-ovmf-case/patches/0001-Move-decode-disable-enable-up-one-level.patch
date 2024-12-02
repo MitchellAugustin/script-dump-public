@@ -1,0 +1,104 @@
+From 692782cd6eaa9059d8976e1bf1db1cb01611bc17 Mon Sep 17 00:00:00 2001
+From: Mitchell Augustin <mitchell.augustin@canonical.com>
+Date: Mon, 2 Dec 2024 13:43:21 -0600
+Subject: [PATCH] Move decode disable/enable up one level
+
+---
+ drivers/pci/probe.c | 32 +++++++++++++++++++++++---------
+ 1 file changed, 23 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/pci/probe.c b/drivers/pci/probe.c
+index f1615805f5b0..18707e1640e3 100644
+--- a/drivers/pci/probe.c
++++ b/drivers/pci/probe.c
+@@ -255,7 +255,7 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 
+ 	sz64 = pci_size(l64, sz64, mask64);
+ 	if (!sz64) {
+-		pci_info(dev, FW_BUG "%s: invalid; can't size\n", res_name);
++		//pci_info(dev, FW_BUG "%s: invalid; can't size\n", res_name);
+ 		goto fail;
+ 	}
+ 
+@@ -265,8 +265,8 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 			res->flags |= IORESOURCE_UNSET | IORESOURCE_DISABLED;
+ 			res->start = 0;
+ 			res->end = 0;
+-			pci_err(dev, "%s: can't handle BAR larger than 4GB (size %#010llx)\n",
+-				res_name, (unsigned long long)sz64);
++			//pci_err(dev, "%s: can't handle BAR larger than 4GB (size %#010llx)\n",
++			//	res_name, (unsigned long long)sz64);
+ 			goto out;
+ 		}
+ 
+@@ -275,8 +275,8 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 			res->flags |= IORESOURCE_UNSET;
+ 			res->start = 0;
+ 			res->end = sz64 - 1;
+-			pci_info(dev, "%s: can't handle BAR above 4GB (bus address %#010llx)\n",
+-				 res_name, (unsigned long long)l64);
++			//pci_info(dev, "%s: can't handle BAR above 4GB (bus address %#010llx)\n",
++			//	 res_name, (unsigned long long)l64);
+ 			goto out;
+ 		}
+ 	}
+@@ -302,8 +302,8 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 		res->flags |= IORESOURCE_UNSET;
+ 		res->start = 0;
+ 		res->end = region.end - region.start;
+-		pci_info(dev, "%s: initial BAR value %#010llx invalid\n",
+-			 res_name, (unsigned long long)region.start);
++		//pci_info(dev, "%s: initial BAR value %#010llx invalid\n",
++		//	 res_name, (unsigned long long)region.start);
+ 	}
+ 
+ 	goto out;
+@@ -312,8 +312,8 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ fail:
+ 	res->flags = 0;
+ out:
+-	if (res->flags)
+-		pci_info(dev, "%s %pR\n", res_name, res);
++	//if (res->flags)
++	//	pci_info(dev, "%s %pR\n", res_name, res);
+ 
+ 	return (res->flags & IORESOURCE_MEM_64) ? 1 : 0;
+ }
+@@ -321,6 +321,7 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
+ {
+ 	unsigned int pos, reg;
++	u16 orig_cmd;
+ 
+ 	if (dev->non_compliant_bars)
+ 		return;
+@@ -329,6 +330,15 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
+ 	if (dev->is_virtfn)
+ 		return;
+ 
++	/* No printks while decoding is disabled! */
++	if (!dev->mmio_always_on) {
++		pci_read_config_word(dev, PCI_COMMAND, &orig_cmd);
++		if (orig_cmd & PCI_COMMAND_DECODE_ENABLE) {
++			pci_write_config_word(dev, PCI_COMMAND,
++				orig_cmd & ~PCI_COMMAND_DECODE_ENABLE);
++		}
++	}
++
+ 	for (pos = 0; pos < howmany; pos++) {
+ 		struct resource *res = &dev->resource[pos];
+ 		reg = PCI_BASE_ADDRESS_0 + (pos << 2);
+@@ -342,6 +352,10 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
+ 				IORESOURCE_READONLY | IORESOURCE_SIZEALIGN;
+ 		__pci_read_base(dev, pci_bar_mem32, res, rom);
+ 	}
++
++	if (!dev->mmio_always_on && (orig_cmd & PCI_COMMAND_DECODE_ENABLE))
++		pci_write_config_word(dev, PCI_COMMAND, orig_cmd);
++
+ }
+ 
+ static void pci_read_bridge_io(struct pci_dev *dev, struct resource *res,
+-- 
+2.43.0
+
