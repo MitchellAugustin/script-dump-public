@@ -1,0 +1,194 @@
+From d76a083f2fc176b55a809bc625914470f7181990 Mon Sep 17 00:00:00 2001
+From: Mitchell Augustin <mitchell.augustin@canonical.com>
+Date: Mon, 2 Dec 2024 13:43:21 -0600
+Subject: [PATCH] [PATCH] PCI: Add decode disable/enable to device level and
+ add kernel opt for bar logging
+
+In a virtualized environment with PCI devices passed-through,
+disabling and enabling decoding is not trivial, and in some
+configurations can take up to 2 seconds of wall clock time to
+complete. Since this operation could be done once around each
+device for devices with multiple BARs (reducing redundancy),
+add an additional decode disable/enable mask at the device
+level to prevent redundant disable/enables from occurring
+during each BAR sizing operation, when pci_read_bases() is
+the originator.
+
+Since __pci_read_base() can also be called independently,
+keep the current disable/enable mask in that function as-is.
+
+Since printk cannot be used while decoding is disabled,
+change the default behavior of __pci_read_base() to omit
+print operations. Add a pci=bar_logging_enabled kernel command
+line option to re-enable this logging if needed (which, when
+used, forgoes the performance benefits introduced by this
+patch's reduced redundancy.)
+
+This has been tested on a DGX H100 host and guest, as well
+as an SR670v2 host and guest. In both cases, no regressions
+were observed, and on the H100, VM boot time was reduced
+from 3 minutes to 1.5 minutes.
+
+Link: https://lore.kernel.org/all/CAHTA-uYp07FgM6T1OZQKqAdSA5JrZo0ReNEyZgQZub4mDRrV5w@mail.gmail.com/
+Reported-by: "Mitchell Augustin" <mitchell.augustin@canonical.com>
+Closes: https://lore.kernel.org/all/CAHTA-uYp07FgM6T1OZQKqAdSA5JrZo0ReNEyZgQZub4mDRrV5w@mail.gmail.com/
+Tested-by: "Mitchell Augustin" <mitchell.augustin@canonical.com>
+Signed-off-by: "Mitchell Augustin" <mitchell.augustin@canonical.com>
+---
+ .../admin-guide/kernel-parameters.txt         |  5 +++
+ drivers/pci/pci.c                             |  3 ++
+ drivers/pci/pci.h                             |  1 +
+ drivers/pci/probe.c                           | 39 +++++++++++++++----
+ 4 files changed, 40 insertions(+), 8 deletions(-)
+
+diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
+index d401577b5a6a..c9b3bec6405e 100644
+--- a/Documentation/admin-guide/kernel-parameters.txt
++++ b/Documentation/admin-guide/kernel-parameters.txt
+@@ -4569,6 +4569,11 @@
+ 				any pair of devices, possibly at the cost of
+ 				reduced performance.  This also guarantees
+ 				that hot-added devices will work.
++		bar_logging_enabled	Enable logging during each BAR sizing
++				operation. This functionality is disabled by
++				default to allow for decoding to be disabled
++				earlier, which prevents printk but results in
++				fewer redundant decode disable/enables.
+ 		cbiosize=nn[KMG]	The fixed amount of bus space which is
+ 				reserved for the CardBus bridge's IO window.
+ 				The default value is 256 bytes.
+diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
+index 225a6cd2e9ca..38abbef8f254 100644
+--- a/drivers/pci/pci.c
++++ b/drivers/pci/pci.c
+@@ -159,6 +159,7 @@ static bool pcie_ats_disabled;
+ 
+ /* If set, the PCI config space of each device is printed during boot. */
+ bool pci_early_dump;
++bool pci_bar_logging_enabled;
+ 
+ bool pci_ats_disabled(void)
+ {
+@@ -6936,6 +6937,8 @@ static int __init pci_setup(char *str)
+ 				disable_acs_redir_param = str + 18;
+ 			} else if (!strncmp(str, "config_acs=", 11)) {
+ 				config_acs_param = str + 11;
++			} else if (!strncmp(str, "bar_logging_enabled", 19)) {
++				pci_bar_logging_enabled = true;
+ 			} else {
+ 				pr_err("PCI: Unknown option `%s'\n", str);
+ 			}
+diff --git a/drivers/pci/pci.h b/drivers/pci/pci.h
+index 14d00ce45bfa..e322e2c3b749 100644
+--- a/drivers/pci/pci.h
++++ b/drivers/pci/pci.h
+@@ -82,6 +82,7 @@
+ 
+ extern const unsigned char pcie_link_speed[];
+ extern bool pci_early_dump;
++extern bool pci_bar_logging_enabled;
+ 
+ bool pcie_cap_has_lnkctl(const struct pci_dev *dev);
+ bool pcie_cap_has_lnkctl2(const struct pci_dev *dev);
+diff --git a/drivers/pci/probe.c b/drivers/pci/probe.c
+index f1615805f5b0..c2f38161bc85 100644
+--- a/drivers/pci/probe.c
++++ b/drivers/pci/probe.c
+@@ -255,7 +255,8 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 
+ 	sz64 = pci_size(l64, sz64, mask64);
+ 	if (!sz64) {
+-		pci_info(dev, FW_BUG "%s: invalid; can't size\n", res_name);
++		if (pci_bar_logging_enabled)
++			pci_info(dev, FW_BUG "%s: invalid; can't size\n", res_name);
+ 		goto fail;
+ 	}
+ 
+@@ -265,8 +266,10 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 			res->flags |= IORESOURCE_UNSET | IORESOURCE_DISABLED;
+ 			res->start = 0;
+ 			res->end = 0;
+-			pci_err(dev, "%s: can't handle BAR larger than 4GB (size %#010llx)\n",
+-				res_name, (unsigned long long)sz64);
++			if (pci_bar_logging_enabled) {
++				pci_err(dev, "%s: can't handle BAR larger than 4GB (size %#010llx)\n",
++						res_name, (unsigned long long)sz64);
++			}
+ 			goto out;
+ 		}
+ 
+@@ -275,8 +278,10 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 			res->flags |= IORESOURCE_UNSET;
+ 			res->start = 0;
+ 			res->end = sz64 - 1;
+-			pci_info(dev, "%s: can't handle BAR above 4GB (bus address %#010llx)\n",
+-				 res_name, (unsigned long long)l64);
++			if (pci_bar_logging_enabled) {
++				pci_info(dev, "%s: can't handle BAR above 4GB (bus address %#010llx)\n",
++						res_name, (unsigned long long)l64);
++			}
+ 			goto out;
+ 		}
+ 	}
+@@ -302,8 +307,10 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 		res->flags |= IORESOURCE_UNSET;
+ 		res->start = 0;
+ 		res->end = region.end - region.start;
+-		pci_info(dev, "%s: initial BAR value %#010llx invalid\n",
+-			 res_name, (unsigned long long)region.start);
++		if (pci_bar_logging_enabled) {
++			pci_info(dev, "%s: initial BAR value %#010llx invalid\n",
++					res_name, (unsigned long long)region.start);
++		}
+ 	}
+ 
+ 	goto out;
+@@ -312,7 +319,7 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ fail:
+ 	res->flags = 0;
+ out:
+-	if (res->flags)
++	if (res->flags && pci_bar_logging_enabled)
+ 		pci_info(dev, "%s %pR\n", res_name, res);
+ 
+ 	return (res->flags & IORESOURCE_MEM_64) ? 1 : 0;
+@@ -321,6 +328,7 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
+ {
+ 	unsigned int pos, reg;
++	u16 orig_cmd;
+ 
+ 	if (dev->non_compliant_bars)
+ 		return;
+@@ -329,6 +337,16 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
+ 	if (dev->is_virtfn)
+ 		return;
+ 
++	/* No printks while decoding is disabled! */
++	if (!dev->mmio_always_on && !pci_bar_logging_enabled) {
++		pci_info(dev, "BAR info logging disabled - enable with pci=bar_logging_enabled\n");
++		pci_read_config_word(dev, PCI_COMMAND, &orig_cmd);
++		if (orig_cmd & PCI_COMMAND_DECODE_ENABLE) {
++			pci_write_config_word(dev, PCI_COMMAND,
++				orig_cmd & ~PCI_COMMAND_DECODE_ENABLE);
++		}
++	}
++
+ 	for (pos = 0; pos < howmany; pos++) {
+ 		struct resource *res = &dev->resource[pos];
+ 		reg = PCI_BASE_ADDRESS_0 + (pos << 2);
+@@ -342,6 +360,11 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
+ 				IORESOURCE_READONLY | IORESOURCE_SIZEALIGN;
+ 		__pci_read_base(dev, pci_bar_mem32, res, rom);
+ 	}
++
++	if (!dev->mmio_always_on && (orig_cmd & PCI_COMMAND_DECODE_ENABLE)
++			&& !pci_bar_logging_enabled)
++		pci_write_config_word(dev, PCI_COMMAND, orig_cmd);
++
+ }
+ 
+ static void pci_read_bridge_io(struct pci_dev *dev, struct resource *res,
+-- 
+2.43.0
+
