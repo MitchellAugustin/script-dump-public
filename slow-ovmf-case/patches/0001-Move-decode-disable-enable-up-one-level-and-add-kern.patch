@@ -69,7 +69,7 @@ index f1615805f5b0..42fa63e9f5e4 100644
  	sz64 = pci_size(l64, sz64, mask64);
  	if (!sz64) {
 -		pci_info(dev, FW_BUG "%s: invalid; can't size\n", res_name);
-+		if (pci_bar_logging_enabled) 
++		if (pci_bar_logging_enabled)
 +			pci_info(dev, FW_BUG "%s: invalid; can't size\n", res_name);
  		goto fail;
  	}
