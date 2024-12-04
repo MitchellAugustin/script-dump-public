@@ -1,78 +1,220 @@
-From 692782cd6eaa9059d8976e1bf1db1cb01611bc17 Mon Sep 17 00:00:00 2001
+From d86caf50b79910d12d2bd5fc64fae789a2df1a42 Mon Sep 17 00:00:00 2001
 From: Mitchell Augustin <mitchell.augustin@canonical.com>
-Date: Mon, 2 Dec 2024 13:43:21 -0600
+Date: Wed, 4 Dec 2024 13:39:20 -0600
 Subject: [PATCH] Move decode disable/enable up one level
 
 ---
- drivers/pci/probe.c | 32 +++++++++++++++++++++++---------
- 1 file changed, 23 insertions(+), 9 deletions(-)
+ drivers/pci/iov.c   |  16 ++++--
+ drivers/pci/pci.h   |   7 ++-
+ drivers/pci/probe.c | 129 ++++++++++++++++++++++++++++++++++++++++----
+ 3 files changed, 139 insertions(+), 13 deletions(-)
 
+diff --git a/drivers/pci/iov.c b/drivers/pci/iov.c
+index aaa33e8dc4c9..5a8dce573e29 100644
+--- a/drivers/pci/iov.c
++++ b/drivers/pci/iov.c
+@@ -784,6 +784,10 @@ static int sriov_init(struct pci_dev *dev, int pos)
+ 		return -ENOMEM;
+ 
+ 	nres = 0;
++	u64 sz64s[PCI_SRIOV_NUM_BARS] = { 0 };
++	u64 l64s[PCI_SRIOV_NUM_BARS] = { 0 };
++	u64 mask64s[PCI_SRIOV_NUM_BARS] = { 0 };
++	bool region_matches[PCI_SRIOV_NUM_BARS] = { 0 };
+ 	for (i = 0; i < PCI_SRIOV_NUM_BARS; i++) {
+ 		res = &dev->resource[i + PCI_IOV_RESOURCES];
+ 		res_name = pci_resource_name(dev, i + PCI_IOV_RESOURCES);
+@@ -792,11 +796,17 @@ static int sriov_init(struct pci_dev *dev, int pos)
+ 		 * If it is already FIXED, don't change it, something
+ 		 * (perhaps EA or header fixups) wants it this way.
+ 		 */
+-		if (res->flags & IORESOURCE_PCI_FIXED)
++		if (res->flags & IORESOURCE_PCI_FIXED) {
+ 			bar64 = (res->flags & IORESOURCE_MEM_64) ? 1 : 0;
+-		else
++		}
++		else {
+ 			bar64 = __pci_read_base(dev, pci_bar_unknown, res,
+-						pos + PCI_SRIOV_BAR + i * 4);
++						pos + PCI_SRIOV_BAR + i * 4,
++						sz64s, l64s, mask64s, region_matches, i);
++			__pci_finalize_base(dev, pci_bar_unknown, res,
++					pos + PCI_SRIOV_BAR + i * 4,
++					sz64s[i], l64s[i], mask64s[i], region_matches[i]);
++		}
+ 		if (!res->flags)
+ 			continue;
+ 		if (resource_size(res) & (PAGE_SIZE - 1)) {
+diff --git a/drivers/pci/pci.h b/drivers/pci/pci.h
+index 14d00ce45bfa..8e418eadc8d2 100644
+--- a/drivers/pci/pci.h
++++ b/drivers/pci/pci.h
+@@ -315,7 +315,12 @@ int pci_idt_bus_quirk(struct pci_bus *bus, int devfn, u32 *pl, int rrs_timeout);
+ 
+ int pci_setup_device(struct pci_dev *dev);
+ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+-		    struct resource *res, unsigned int reg);
++                    struct resource *res, unsigned int pos,
++                    u64 *sz64s, u64 *l64s, u64 *mask64s,
++                    bool *region_matches, unsigned int bar_idx);
++int __pci_finalize_base(struct pci_dev *dev, enum pci_bar_type type,
++                struct resource *res, unsigned int pos,
++                u64 sz64, u64 l64, u64 mask64, bool region_match);
+ void pci_configure_ari(struct pci_dev *dev);
+ void __pci_bus_size_bridges(struct pci_bus *bus,
+ 			struct list_head *realloc_head);
 diff --git a/drivers/pci/probe.c b/drivers/pci/probe.c
-index f1615805f5b0..18707e1640e3 100644
+index f1615805f5b0..8f5bf95d2c2c 100644
 --- a/drivers/pci/probe.c
 +++ b/drivers/pci/probe.c
-@@ -255,7 +255,7 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+@@ -173,8 +173,10 @@ static inline unsigned long decode_bar(struct pci_dev *dev, u32 bar)
+  *
+  * Returns 1 if the BAR is 64-bit, or 0 if 32-bit.
+  */
+-int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+-		    struct resource *res, unsigned int pos)
++void __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
++		    struct resource *res, unsigned int pos,
++		    u64 *sz64s, u64 *l64s, u64 *mask64s,
++		    bool *region_matches, unsigned int bar_idx)
+ {
+ 	u32 l = 0, sz = 0, mask;
+ 	u64 l64, sz64, mask64;
+@@ -247,15 +249,19 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 		mask64 |= ((u64)~0 << 32);
+ 	}
+ 
++	sz64s[bar_idx] = sz64;
++	l64s[bar_idx] = l64;
++	mask64s[bar_idx] = mask64;
++
+ 	if (!dev->mmio_always_on && (orig_cmd & PCI_COMMAND_DECODE_ENABLE))
+ 		pci_write_config_word(dev, PCI_COMMAND, orig_cmd);
+ 
++
+ 	if (!sz64)
+ 		goto fail;
  
  	sz64 = pci_size(l64, sz64, mask64);
  	if (!sz64) {
 -		pci_info(dev, FW_BUG "%s: invalid; can't size\n", res_name);
-+		//pci_info(dev, FW_BUG "%s: invalid; can't size\n", res_name);
  		goto fail;
  	}
  
-@@ -265,8 +265,8 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+@@ -265,8 +271,6 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
  			res->flags |= IORESOURCE_UNSET | IORESOURCE_DISABLED;
  			res->start = 0;
  			res->end = 0;
 -			pci_err(dev, "%s: can't handle BAR larger than 4GB (size %#010llx)\n",
 -				res_name, (unsigned long long)sz64);
-+			//pci_err(dev, "%s: can't handle BAR larger than 4GB (size %#010llx)\n",
-+			//	res_name, (unsigned long long)sz64);
  			goto out;
  		}
  
-@@ -275,8 +275,8 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+@@ -275,8 +279,6 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
  			res->flags |= IORESOURCE_UNSET;
  			res->start = 0;
  			res->end = sz64 - 1;
 -			pci_info(dev, "%s: can't handle BAR above 4GB (bus address %#010llx)\n",
 -				 res_name, (unsigned long long)l64);
-+			//pci_info(dev, "%s: can't handle BAR above 4GB (bus address %#010llx)\n",
-+			//	 res_name, (unsigned long long)l64);
  			goto out;
  		}
  	}
-@@ -302,8 +302,8 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+@@ -302,6 +304,72 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
  		res->flags |= IORESOURCE_UNSET;
  		res->start = 0;
  		res->end = region.end - region.start;
--		pci_info(dev, "%s: initial BAR value %#010llx invalid\n",
--			 res_name, (unsigned long long)region.start);
-+		//pci_info(dev, "%s: initial BAR value %#010llx invalid\n",
-+		//	 res_name, (unsigned long long)region.start);
++		region_matches[bar_idx] = false;
++	}
++	else {
++		region_matches[bar_idx] = true;
++	}
++
++	goto out;
++
++fail:
++	res->flags = 0;
++out:
++	return (res->flags & IORESOURCE_MEM_64) ? 1 : 0;
++}
++
++/**
++ * __pci_finalize_base - Read a PCI BAR
++ * @dev: the PCI device
++ * @type: type of the BAR
++ * @res: resource buffer to be filled in
++ * @pos: BAR position in the config space
++ *
++ * Returns 1 if the BAR is 64-bit, or 0 if 32-bit.
++ */
++int __pci_finalize_base(struct pci_dev *dev, enum pci_bar_type type,
++		struct resource *res, unsigned int pos,
++		u64 sz64, u64 l64, u64 mask64, bool region_match)
++{
++	const char *res_name = pci_resource_name(dev, res - dev->resource);
++
++	if (!sz64)
++		goto fail;
++
++	sz64 = pci_size(l64, sz64, mask64);
++	if (!sz64) {
++		pci_info(dev, FW_BUG "%s: invalid; can't size\n", res_name);
++		goto fail;
++	}
++
++	if (res->flags & IORESOURCE_MEM_64) {
++		if ((sizeof(pci_bus_addr_t) < 8 || sizeof(resource_size_t) < 8)
++		    && sz64 > 0x100000000ULL) {
++			pci_err(dev, "%s: can't handle BAR larger than 4GB (size %#010llx)\n",
++				res_name, (unsigned long long)sz64);
++			goto out;
++		}
++
++		if ((sizeof(pci_bus_addr_t) < 8) && l) {
++			/* Above 32-bit boundary; try to reallocate */
++			pci_info(dev, "%s: can't handle BAR above 4GB (bus address %#010llx)\n",
++				 res_name, (unsigned long long)l64);
++			goto out;
++		}
++	}
++
++	/*
++	 * If "A" is a BAR value (a bus address), "bus_to_resource(A)" is
++	 * the corresponding resource address (the physical address used by
++	 * the CPU.  Converting that resource address back to a bus address
++	 * should yield the original BAR value:
++	 *
++	 *     resource_to_bus(bus_to_resource(A)) == A
++	 *
++	 * If it doesn't, CPU accesses to "bus_to_resource(A)" will not
++	 * be claimed by the device.
++	 */
++	if (!region_match) {
+ 		pci_info(dev, "%s: initial BAR value %#010llx invalid\n",
+ 			 res_name, (unsigned long long)region.start);
  	}
- 
- 	goto out;
-@@ -312,8 +312,8 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
- fail:
- 	res->flags = 0;
- out:
--	if (res->flags)
--		pci_info(dev, "%s %pR\n", res_name, res);
-+	//if (res->flags)
-+	//	pci_info(dev, "%s %pR\n", res_name, res);
+@@ -316,11 +384,21 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 		pci_info(dev, "%s %pR\n", res_name, res);
  
  	return (res->flags & IORESOURCE_MEM_64) ? 1 : 0;
++
  }
-@@ -321,6 +321,7 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+ 
  static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
  {
  	unsigned int pos, reg;
-+	u16 orig_cmd;
++	u64 sz64s[PCI_STD_NUM_BARS] = { 0 };
++	u64 l64s[PCI_STD_NUM_BARS] = { 0 };
++	u64 mask64s[PCI_STD_NUM_BARS] = { 0 };
++	bool region_matches[PCI_STD_NUM_BARS] = { 0 };
++
++	u64 romsz64[1] = { 0 };
++	u64 roml64[1] = { 0 };
++	u64 rommask64[1] = { 0 };
++	bool rom_region_matches[PCI_STD_NUM_BARS] = { 0 };
  
  	if (dev->non_compliant_bars)
  		return;
-@@ -329,6 +330,15 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
+@@ -329,10 +407,20 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
  	if (dev->is_virtfn)
  		return;
  
@@ -88,13 +230,41 @@ index f1615805f5b0..18707e1640e3 100644
  	for (pos = 0; pos < howmany; pos++) {
  		struct resource *res = &dev->resource[pos];
  		reg = PCI_BASE_ADDRESS_0 + (pos << 2);
-@@ -342,6 +352,10 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
+-		pos += __pci_read_base(dev, pci_bar_unknown, res, reg);
++		pos += __pci_read_base(dev, pci_bar_unknown, res, reg,
++				sz64s, l64s, mask64s, region_matches, pos);
+ 	}
+ 
+ 	if (rom) {
+@@ -340,8 +428,31 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
+ 		dev->rom_base_reg = rom;
+ 		res->flags = IORESOURCE_MEM | IORESOURCE_PREFETCH |
  				IORESOURCE_READONLY | IORESOURCE_SIZEALIGN;
- 		__pci_read_base(dev, pci_bar_mem32, res, rom);
+-		__pci_read_base(dev, pci_bar_mem32, res, rom);
++		__pci_read_base(dev, pci_bar_mem32, res, rom,
++				romsz64, roml64, rommask64, rom_region_matches, 0);
  	}
 +
 +	if (!dev->mmio_always_on && (orig_cmd & PCI_COMMAND_DECODE_ENABLE))
 +		pci_write_config_word(dev, PCI_COMMAND, orig_cmd);
++
++
++	for (pos = 0; pos < howmany; pos++) {
++		struct resource *res = &dev->resource[pos];
++		reg = PCI_BASE_ADDRESS_0 + (pos << 2);
++		pos += __pci_finalize_base(dev, pci_bar_unknown, res, reg,
++				sz64s[pos], l64s[pos], mask64s[pos], region_matches[pos]);
++	}
++
++	if (rom) {
++		struct resource *res = &dev->resource[PCI_ROM_RESOURCE];
++		dev->rom_base_reg = rom;
++		res->flags = IORESOURCE_MEM | IORESOURCE_PREFETCH |
++				IORESOURCE_READONLY | IORESOURCE_SIZEALIGN;
++		__pci_finalize_base(dev, pci_bar_mem32, res, rom,
++				romsz64[0], roml64[0], rommask64[0], rom_region_matches[0]);
++	}
++
 +
  }
  
