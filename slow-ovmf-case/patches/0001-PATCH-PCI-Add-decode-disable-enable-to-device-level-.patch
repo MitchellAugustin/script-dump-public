@@ -25,11 +25,16 @@ __pci_read_base() through which the caller can access
 necessary data from __pci_read_base() and pass it to
 __pci_print_bar_status().
 
-This has been tested on an SR670v2 host and guest. I confirmed
+This has been tested on an SR670v2 host and guest VM, and
+a DGX A100 host and guest VM. I confirmed
 that BAR info logged to dmesg was consistent on both between
-unmodified 6.12.1 and with this patch and that BAR mappings
-in /proc/iomem were consistent between versions. No
-regressions were observed.
+unmodified 6.12.1 and with this patch, that BAR mappings
+in /proc/iomem were consistent between versions, and that
+lspci -vv results were consistent between versions.
+On the A100, I also confirmed that the Nvidia driver
+loads as expected with the patch, and that VM boot time
+with cold-plugged, passed-through GPUs is about 2x faster
+(reduced from 5:36 to 2:53). No regressions were observed.
 
 Link: https://lore.kernel.org/all/CAHTA-uYp07FgM6T1OZQKqAdSA5JrZo0ReNEyZgQZub4mDRrV5w@mail.gmail.com/
 Reported-by: "Mitchell Augustin" <mitchell.augustin@canonical.com>
