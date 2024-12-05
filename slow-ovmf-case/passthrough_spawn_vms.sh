@@ -23,12 +23,12 @@ version: 2
 EOF
 
 cloud-localds ${VM}-seed.qcow2 user-data -d qcow2
-qemu-img create -b jammy-server-cloudimg-amd64.img -F qcow2 -f qcow2 ${VM}-vda.qcow2 30G
+qemu-img create -b jammy-server-cloudimg-amd64.img -F qcow2 -f qcow2 ${VM}-vda.qcow2 80G
 
-GPU01=pci_0000_01_00_0
-GPU02=pci_0000_47_00_0
-GPU03=pci_0000_81_00_0
-GPU04=pci_0000_c2_00_0
+GPU01=pci_0000_07_00_0
+GPU02=pci_0000_0f_00_0
+GPU03=pci_0000_47_00_0
+GPU04=pci_0000_4e_00_0
 
 GPU_VAR="GPU$1"
 
@@ -41,10 +41,10 @@ echo "CPU set: $cpusetstart-$cpusetend"
 
 echo "GPU: ${!GPU_VAR}"
 
-virt-install --name ${VM} --memory $((128*1024*1024)) --graphics vnc,listen=0.0.0.0 --noautoconsole \
+virt-install --name ${VM} --memory $((138*1024*1024)) --graphics vnc,listen=0.0.0.0 --noautoconsole \
              --console pty,target_type=serial --vcpus 4,cpuset=$cpusetstart-$cpusetend \
              --machine q35 --osinfo name=ubuntujammy \
-	     --cpu host-passthrough,cache.mode=passthrough,cell0.memory=$((8*1024*1024)),cell0.cpus=0-3 \
+	     --cpu host-passthrough,cache.mode=passthrough,cell0.memory=$((128*1024*1024)),cell0.cpus=0-3 \
              --boot loader=/usr/share/OVMF/OVMF_CODE_4M.fd,loader_ro=yes,loader_type=pflash \
              --disk ${VM}-vda.qcow2 --disk ${VM}-seed.qcow2 --import \
 	     --host-device=${GPU01} \
