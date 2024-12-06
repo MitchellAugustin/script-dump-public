@@ -1,15 +1,10 @@
 From 5dc2eb5a47d3790a3926e87234ef24ed636124a4 Mon Sep 17 00:00:00 2001
 From: Mitchell Augustin <mitchell.augustin@canonical.com>
 Date: Wed, 4 Dec 2024 13:39:20 -0600
-Subject: [PATCH] PCI: Add decode disable/enable to device level and separate
- BAR info logging into separate function
+Subject: [PATCH 1/1] PCI: Add decode disable/enable to device level and
+ separate BAR info logging into separate function
 
-In a virtualized environment with PCI devices passed-through,
-disabling and enabling decoding is not trivial, and in some
-configurations can take up to 2 seconds of wall clock time to
-complete. Since this operation could be done once around each
-device for devices with multiple BARs (reducing redundancy),
-add an additional decode disable/enable mask at the device
+Add an additional decode disable/enable mask at the device
 level to prevent redundant disable/enables from occurring
 during each BAR sizing operation, when pci_read_bases() is
 the originator.
@@ -24,20 +19,6 @@ To enable this, add pointers to the signature for
 __pci_read_base() through which the caller can access
 necessary data from __pci_read_base() and pass it to
 __pci_print_bar_status().
-
-This has been tested on an SR670v2 host and guest VM,
-a DGX H100 host and guest VM, and a DGX A100 host and guest
-VM. I confirmed that BAR info logged to dmesg was consistent
-on each between unmodified 6.12.1 and with this patch, that
-BAR mappings in /proc/iomem were consistent between
-versions, and that lspci -vv results were consistent
-between versions. On the A100/H100, I also confirmed that the
-Nvidia driver loads as expected with the patch, and that
-VM boot time with cold-plugged, passed-through GPUs is about
-2x faster on both. No regressions were observed.
-
-Also tested on top of PCI branch v6.13-rc1 and saw similar
-results.
 
 Link: https://lore.kernel.org/all/CAHTA-uYp07FgM6T1OZQKqAdSA5JrZo0ReNEyZgQZub4mDRrV5w@mail.gmail.com/
 Reported-by: "Mitchell Augustin" <mitchell.augustin@canonical.com>
