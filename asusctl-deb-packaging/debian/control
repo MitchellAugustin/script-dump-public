@@ -1,0 +1,63 @@
+Source: asusctl
+Section: utils
+Priority: optional
+Maintainer: Mitchell Augustin <mitchell@mitchellaugustin.com>
+Uploaders: Mitchell Augustin <mitchell@mitchellaugustin.com>
+Build-Depends:
+ cargo,
+ debhelper-compat (= 13),
+ dh-cargo-tools,
+ dh-exec,
+ libclang-dev,
+ libudev-dev,
+ libfontconfig-dev,
+ build-essential,
+ libxkbcommon-dev,
+ cmake,
+ rustc,
+ libstd-rust-dev,
+ quilt
+Standards-Version: 4.6.2
+Homepage: https://gitlab.com/asus-linux/asusctl
+XS-Build-Indep-Architecture: amd64
+XS-Vendored-Sources-Rust: ab_glyph, ab_glyph_rasterizer, addr2line, adler, adler2, ahash, aho-corasick, allocator-api2, android-activity, android-properties, android_system_properties, android-tzdata, anyhow, arrayref, arrayvec, as-raw-xcb-connection, async-broadcast, async-channel, async-channel@1.9.0, async-executor, async-fs, async-fs@1.6.0, async-io, async-io@1.13.0, async-lock, async-lock@2.8.0, async-net, async-process, async-process@1.8.1, async-recursion, async-signal, async-stream, async-stream-impl, async-task, async-trait, atomic-waker, autocfg, auto_enums, axum, axum-core, backtrace, base64, base64@0.21.7, betrayer, bindgen, bit_field, bitflags, bitflags@1.3.2, block, block2, block2@0.4.0, block-buffer, blocking, block-sys, bumpalo, by_address, bytemuck, bytemuck_derive, byteorder, byteorder-lite, bytes, calloop, calloop@0.12.4, calloop-wayland-source, cargo-husky, cc, cesu8, cexpr, cfg_aliases, cfg-if, cgl, chrono, clang-sys, clipboard-win, clru, cocoa, cocoa-foundation, codemap, codemap-diagnostic, color_quant, combine, concat-idents, concurrent-queue, console-api, console-subscriber, const-field-offset, const-field-offset-macro, convert_case, copypasta, core-foundation, core-foundation-sys, core-graphics, core-graphics-types, core-text, countme, cpufeatures, crc32fast, critical-section, crossbeam-channel, crossbeam-deque, crossbeam-epoch, crossbeam-utils, crunchy, crypto-common, ctor-lite, cursor-icon, data-url, deranged, derive_more, derive_utils, digest, dirs, dirs-next, dirs-sys, dirs-sys-next, dispatch, dlib, downcast-rs, dpi, drm, drm-ffi, drm-fourcc, drm-sys, dwrote, either, endi, enumflags2, enumflags2_derive, env_logger, equivalent, errno, euclid, event-listener, event-listener@2.5.3, event-listener@3.1.0, event-listener-strategy, exr, fastrand, fastrand@1.9.0, fdeflate, femtovg, field-offset, filetime, flate2, float-cmp, flume, fnv, fontconfig-parser, fontdb, fontdue, foreign-types, foreign-types-macros, foreign-types-shared, form_urlencoded, futures-channel, futures-core, futures-io, futures-lite, futures-lite@1.13.0, futures-sink, futures-task, futures-util, gbm, gbm-sys, generic-array, gethostname, getrandom, gettext-rs, gettext-sys, gif, gif@0.12.0, gimli, glam, gl_generator, glob, glow, glutin, glutin_egl_sys, glutin_glx_sys, glutin_wgl_sys, glutin-winit, gumdrop, gumdrop_derive, h2, half, hashbrown, hashbrown@0.12.3, hdrhistogram, heck, hermit-abi, hermit-abi@0.3.9, hex, home, http, httparse, http-body, http-body-util, httpdate, humantime, hyper, hyper-timeout, hyper-util, iana-time-zone, iana-time-zone-haiku, icrate, idna, image, image@0.24.9, imagesize, imgref, indexmap, indexmap@1.9.3, inotify, inotify-sys, input, input-sys, instant, integer-sqrt, io-lifetimes, i-slint-backend-linuxkms, i-slint-backend-selector, i-slint-backend-winit, i-slint-common, i-slint-compiler, i-slint-core, i-slint-core-macros, i-slint-renderer-femtovg, i-slint-renderer-skia, is-terminal, itertools, itertools@0.12.1, itoa, jni, jni-sys, jobserver, jpeg-decoder, js-sys, khronos_api, kurbo, lazy-bytes-cast, lazycell, lazy_static, lebe, libc, libloading, libm, libredox, libredox@0.0.2, libseat, libseat-sys, libudev-sys, libusb1-sys, linked-hash-map, linked_hash_set, linux-raw-sys, linux-raw-sys@0.3.8, locale_config, lock_api, log, logind-zbus, lru, lyon_algorithms, lyon_extra, lyon_geom, lyon_path, mac-notification-sys, malloc_buf, matchers, matchit, memchr, memmap2, memmap2@0.8.0, memoffset, metal, mime, minimal-lexical, miniz_oxide, miniz_oxide@0.4.4, miniz_oxide@0.7.4, mio, mio@0.8.11, nanorand, ndk, ndk-context, ndk-sys, nix, nix@0.26.4, nix@0.27.1, nom, notify-rust, num-conv, num_enum, num_enum_derive, num-traits, objc, objc2, objc2-app-kit, objc2-cloud-kit, objc2-contacts, objc2-core-data, objc2-core-image, objc2-core-location, objc2-encode, objc2-foundation, objc2-link-presentation, objc2-metal, objc2-quartz-core, objc2-symbols, objc2-ui-kit, objc2-uniform-type-identifiers, objc2-user-notifications, objc_exception, objc-foundation, objc_id, objc-sys, object, once_cell, orbclient, ordered-stream, owned_ttf_parser, parking, parking_lot, parking_lot_core, paste, percent-encoding, pico-args, pin-project, pin-project-internal, pin-project-lite, pin-utils, pin-weak, piper, pix, pkg-config, png, png_pong, polling, polling@2.8.0, portable-atomic, powerfmt, ppv-lite86, prettyplease, proc-macro2, proc-macro-crate, prost, prost-derive, prost-types, qoi, quick-xml, quick-xml@0.31.0, quote, rand, rand_chacha, rand_core, raw-window-handle, rayon, rayon-core, redox_syscall, redox_syscall@0.4.1, redox_users, regex, regex-automata, regex-automata@0.1.10, regex-syntax, regex-syntax@0.6.29, resvg, rgb, ron, rowan, roxmltree, rusb, rustc-demangle, rustc-hash, rustc_version, rustix, rustix@0.37.27, rustversion, rustybuzz, ryu, same-file, scoped-tls, scoped-tls-hkt, scopeguard, sctk-adwaita, sdl2, sdl2-sys, semver, serde, serde_derive, serde_json, serde_repr, serde_spanned, sha1, sharded-slab, shlex, signal-hook-registry, simd-adler32, simplecss, siphasher, skia-bindings, skia-safe, slab, slint, slint-build, slint-macros, slotmap, smallvec, smithay-client-toolkit, smithay-clipboard, smol, smol_str, socket2, socket2@0.4.10, softbuffer, spin, spin_on, stable_deref_trait, static_assertions, strict-num, strum, strum_macros, supergfxctl, svgtypes, syn, syn@1.0.109, sync_wrapper, sync_wrapper@0.1.2, tar, tauri-winrt-notification, temp-dir, tempfile, termcolor, text-size, thiserror, thiserror-impl, thread_local, tiff, time, time-core, tiny-skia, tiny-skia-path, tinyvec, tinyvec_macros, tiny-xlib, tokio, tokio-macros, tokio-stream, tokio-util, toml, toml_datetime, toml_edit, tonic, tower, tower-layer, tower-service, tracing, tracing-attributes, tracing-core, tracing-subscriber, try-lock, ttf-parser, ttf-parser@0.21.1, typenum, typeshare, typeshare-annotation, udev, udev@0.7.0, udev@0.8.0, uds_windows, uhidrs-sys, uhid-virt, unicode-bidi, unicode-bidi-mirroring, unicode-ccc, unicode-ident, unicode-linebreak, unicode-normalization, unicode-properties, unicode-script, unicode-segmentation, unicode-vo, url, usvg, valuable, vcpkg, version_check, version-compare, versions, vtable, vtable-macro, waker-fn, walkdir, want, wasi, wasm-bindgen, wasm-bindgen-backend, wasm-bindgen-futures, wasm-bindgen-macro, wasm-bindgen-macro-support, wasm-bindgen-shared, wayland-backend, wayland-client, wayland-csd-frame, wayland-cursor, wayland-protocols, wayland-protocols-plasma, wayland-protocols-wlr, wayland-scanner, wayland-sys, web-sys, web-time, weezl, which, winapi, winapi-i686-pc-windows-gnu, winapi-util, winapi-x86_64-pc-windows-gnu, windows, windows_aarch64_gnullvm, windows_aarch64_gnullvm@0.42.2, windows_aarch64_gnullvm@0.48.5, windows_aarch64_msvc, windows_aarch64_msvc@0.42.2, windows_aarch64_msvc@0.48.5, windows-core, windows-core@0.52.0, windows_i686_gnu, windows_i686_gnu@0.42.2, windows_i686_gnu@0.48.5, windows_i686_gnullvm, windows_i686_msvc, windows_i686_msvc@0.42.2, windows_i686_msvc@0.48.5, windows-implement, windows-interface, windows-result, windows-sys, windows-sys@0.45.0, windows-sys@0.48.0, windows-sys@0.52.0, windows-targets, windows-targets@0.42.2, windows-targets@0.48.5, windows-version, windows_x86_64_gnu, windows_x86_64_gnu@0.42.2, windows_x86_64_gnu@0.48.5, windows_x86_64_gnullvm, windows_x86_64_gnullvm@0.42.2, windows_x86_64_gnullvm@0.48.5, windows_x86_64_msvc, windows_x86_64_msvc@0.42.2, windows_x86_64_msvc@0.48.5, winit, winnow, wio, x11-clipboard, x11-dl, x11rb, x11rb-protocol, xattr, xcursor, xdg-home, xkbcommon, xkbcommon-dl, xkeysym, xml-rs, xmlwriter, zbus, zbus_macros, zbus_names, zerocopy, zerocopy-derive, zune-inflate, zvariant, zvariant_derive, zvariant_utils
+
+# asusctl, asusd, rog-control-center
+
+Package: asusctl
+Architecture: amd64
+Priority: important
+Depends:
+ dbus,
+ ${misc:Depends},
+ ${perl:Depends},
+ ${shlibs:Depends},
+ ${signing:Depends}
+Description: Control fan speeds, LEDs, graphics modes, and charge levels for ASUS notebooks
+ This package contains asusctl, a userspace command line utility that can be used to control
+ fan curves, LEDs, graphics modes, and charge levels for ASUS notebooks.
+
+Package: asusd
+Architecture: amd64
+Priority: important
+Depends:
+ dbus,
+ ${misc:Depends},
+ ${perl:Depends},
+ ${shlibs:Depends},
+ ${signing:Depends}
+Description: Daemon that enables communication between userland components such as asusctl and kernel features
+ This package contains asusd, the daemon and dbus interface
+
+Package: rog-control-center
+Architecture: amd64
+Priority: important
+Depends:
+ dbus,
+ ${misc:Depends},
+ ${perl:Depends},
+ ${shlibs:Depends},
+ ${signing:Depends}
+Description: GUI for controlling ASUS hardware
+ This package contains the GUI 
+
