@@ -4,7 +4,7 @@ export DEB_BUILD_MAINT_OPTIONS=hardening=+all
 export DEB_CPPFLAGS_MAINT_APPEND = -D_GNU_SOURCE
 export DEB_LDFLAGS_MAINT_APPEND=-Clink-arg=-Wl,-z,relro,-z,now
 export CARGO = /usr/share/cargo/bin/cargo
-export CARGO_VENDOR_DIR = rust-vendor
+export CARGO_VENDOR_DIR = vendor
 export CARGO_HOME = $(CURDIR)/debian/cargo_home
 
 DPKG_EXPORT_BUILDFLAGS = 1
@@ -60,6 +60,8 @@ vendor-tarball: vendor-tarball-sanity-check vendor-deps
 	dh $@
 
 override_dh_auto_configure:
+	mkdir $(CARGO_VENDOR_DIR)
+	tar -xvf ../$(VENDOR_TARBALL) -C $(CARGO_VENDOR_DIR)
 	DEB_CARGO_CRATE=asusctl_$(shell dpkg-parsechangelog --show-field Version) \
 	$(CARGO) prepare-debian $(CARGO_VENDOR_DIR)
 	/usr/share/cargo/bin/dh-cargo-vendored-sources
