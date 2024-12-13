@@ -1,3 +1,10 @@
+asusctl (6.0.12-5) oracular; urgency=medium
+
+  * Add libseat dependency
+
+ -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Fri, 13 Dec 2024 17:07:00 -0600
+
+
 asusctl (6.0.12-4) oracular; urgency=medium
 
   * Re-add XS-Vendored-Sources-Rust entries and tarball

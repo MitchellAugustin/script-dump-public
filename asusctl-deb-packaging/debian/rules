@@ -5,6 +5,7 @@ export DEB_CPPFLAGS_MAINT_APPEND = -D_GNU_SOURCE
 export CARGO = /usr/share/cargo/bin/cargo
 export CARGO_VENDOR_DIR = vendor
 export CARGO_HOME = $(CURDIR)/debian/cargo_home
+export PKG_CONFIG_PATH = /usr/lib/x86_64-linux-gnu/pkgconfig/
 
 DPKG_EXPORT_BUILDFLAGS = 1
 include /usr/share/dpkg/default.mk
