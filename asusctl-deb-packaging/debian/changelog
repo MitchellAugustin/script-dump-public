@@ -1,3 +1,9 @@
+asusctl (6.0.12-6) oracular; urgency=medium
+
+  * Add libinput, libgbm dependency
+
+ -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Fri, 13 Dec 2024 17:41:00 -0600
+
 asusctl (6.0.12-5) oracular; urgency=medium
 
   * Add libseat dependency

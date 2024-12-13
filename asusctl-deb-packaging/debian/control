@@ -13,6 +13,8 @@ Build-Depends:
  libfontconfig-dev,
  libxkbcommon-dev,
  libseat-dev,
+ libinput-dev,
+ libgbm-dev,
  cmake,
  rustc,
  libstd-rust-dev,
