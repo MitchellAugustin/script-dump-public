@@ -29,9 +29,7 @@ Priority: important
 Depends:
  dbus,
  ${misc:Depends},
- ${perl:Depends},
- ${shlibs:Depends},
- ${signing:Depends}
+ ${shlibs:Depends}
 Description: Control fan speeds, LEDs, graphics modes, and charge levels for ASUS notebooks
  This package contains asusctl, a userspace command line utility that can be used to control
  fan curves, LEDs, graphics modes, and charge levels for ASUS notebooks.
@@ -42,9 +40,7 @@ Priority: important
 Depends:
  dbus,
  ${misc:Depends},
- ${perl:Depends},
- ${shlibs:Depends},
- ${signing:Depends}
+ ${shlibs:Depends}
 Description: Daemon that enables communication between userland components such as asusctl and kernel features
  This package contains asusd, the daemon and dbus interface
 
@@ -54,9 +50,7 @@ Priority: important
 Depends:
  dbus,
  ${misc:Depends},
- ${perl:Depends},
- ${shlibs:Depends},
- ${signing:Depends}
+ ${shlibs:Depends}
 Description: GUI for controlling ASUS hardware
  This package contains the GUI 
 

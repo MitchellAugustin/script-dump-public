@@ -1,0 +1,4 @@
+usr/bin/rog-control-center usr/bin/rog-control-center
+usr/share/applications/rog-control-center.desktop usr/share/applications/rog-control-center.desktop
+usr/share/rog-gui/* usr/share/rog-gui
+usr/share/icons/hicolor/* usr/share/icons/hicolor
