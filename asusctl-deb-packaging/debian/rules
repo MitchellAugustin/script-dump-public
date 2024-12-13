@@ -12,7 +12,7 @@ include /usr/share/dpkg/default.mk
 include /usr/share/rustc/architecture.mk
 export DEB_HOST_RUST_TYPE DEB_HOST_GNU_TYPE
 
-VENDOR_TARBALL = asusctl_$(DEB_VERSION_UPSTREAM).orig-$(CARGO_VENDOR_DIR).tar.xz
+VENDOR_TARBALL = asusctl_$(DEB_VERSION_UPSTREAM).orig-$(CARGO_VENDOR_DIR).tar.gz
 
 vendor-tarball-sanity-check:
 	if [ -e ../$(VENDOR_TARBALL) ]; then echo "../$(VENDOR_TARBALL) already exists, bailing!"; exit 1; fi
