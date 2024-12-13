@@ -1,5 +1,11 @@
 asusctl (6.0.12-3) oracular; urgency=medium
 
+  * Re-add XS-Vendored-Sources-Rust entries and tarball
+
+ -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Fri, 13 Dec 2024 16:44:00 -0600
+
+asusctl (6.0.12-3) oracular; urgency=medium
+
   * Remove XS-Vendored-Sources-Rust entries
 
  -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Fri, 13 Dec 2024 16:19:00 -0600
