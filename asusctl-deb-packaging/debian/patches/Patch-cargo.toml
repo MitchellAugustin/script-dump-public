@@ -36,22 +36,3 @@ Last-Update: 2024-12-13
  
  [workspace.dependencies]
  tokio = { version = "^1.39.0", default-features = false, features = [
-@@ -97,3 +100,18 @@ opt-level = 3
- version = "1"
- default-features = false
- features = ["user-hooks"]
-+
-+[source.crates-io]
-+replace-with = "vendored-sources"
-+
-+[source."git+https://github.com/slint-ui/slint.git"]
-+git = "https://github.com/slint-ui/slint.git"
-+replace-with = "vendored-sources"
-+
-+[source."git+https://gitlab.com/asus-linux/supergfxctl.git"]
-+git = "https://gitlab.com/asus-linux/supergfxctl.git"
-+replace-with = "vendored-sources"
-+
-+[source.vendored-sources]
-+directory = "./vendor"
-+

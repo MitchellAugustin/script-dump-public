@@ -2,8 +2,7 @@
 
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
 export DEB_CPPFLAGS_MAINT_APPEND = -D_GNU_SOURCE
-export DEB_LDFLAGS_MAINT_APPEND=-Clink-arg=-Wl,-z,relro,-z,now
-export CARGO = /usr/bin/cargo
+export CARGO = /usr/share/cargo/bin/cargo
 export CARGO_VENDOR_DIR = vendor
 export CARGO_HOME = $(CURDIR)/debian/cargo_home
 

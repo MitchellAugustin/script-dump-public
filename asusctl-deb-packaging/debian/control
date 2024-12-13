@@ -6,7 +6,7 @@ Uploaders: Mitchell Augustin <mitchell@mitchellaugustin.com>
 Build-Depends:
  cargo,
  debhelper-compat (= 13),
- dh-cargo-tools,
+ dh-cargo,
  dh-exec,
  libclang-dev,
  libudev-dev,

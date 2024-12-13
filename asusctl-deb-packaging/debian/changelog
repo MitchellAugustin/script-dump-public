@@ -1,3 +1,9 @@
+asusctl (6.0.12-1) oracular; urgency=medium
+
+  * Change dh-cargo-tools build-dep to dh-cargo
+
+ -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Fri, 13 Dec 2024 14:54:00 -0600
+
 asusctl (6.0.12-0) oracular; urgency=medium
 
   * Fix incorrect cargo binary location
