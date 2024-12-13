@@ -1,4 +1,4 @@
-asusctl (6.0.12-3) oracular; urgency=medium
+asusctl (6.0.12-4) oracular; urgency=medium
 
   * Re-add XS-Vendored-Sources-Rust entries and tarball
 
