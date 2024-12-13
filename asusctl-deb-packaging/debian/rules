@@ -60,7 +60,6 @@ vendor-tarball: vendor-tarball-sanity-check vendor-deps
 
 override_dh_auto_configure:
 	mkdir $(CARGO_VENDOR_DIR)
-	tar -xvf ../$(VENDOR_TARBALL) -C $(CARGO_VENDOR_DIR)
 	DEB_CARGO_CRATE=asusctl_$(shell dpkg-parsechangelog --show-field Version) \
 	$(CARGO) prepare-debian $(CARGO_VENDOR_DIR)
 	/usr/share/cargo/bin/dh-cargo-vendored-sources

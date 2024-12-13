@@ -1,3 +1,11 @@
+asusctl (6.0.12-2) oracular; urgency=medium
+
+  * Adjust patch to correctly handle git-provided repos
+  * Remove redundant untar
+
+ -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Fri, 13 Dec 2024 16:03:00 -0600
+
+
 asusctl (6.0.12-1) oracular; urgency=medium
 
   * Change dh-cargo-tools build-dep to dh-cargo

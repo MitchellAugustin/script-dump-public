@@ -24,8 +24,8 @@ Applied-Upstream: <version>, (<commit-url>|commit:<commid-id>)
 Reviewed-By: <name and email of someone who approved/reviewed the patch>
 Last-Update: 2024-12-13
 
---- asusctl-6.0.12.orig/Cargo.toml
-+++ asusctl-6.0.12/Cargo.toml
+--- asusctl.orig/Cargo.toml
++++ asusctl/Cargo.toml
 @@ -34,6 +34,9 @@ default-members = [
      "cpuctl",
      "rog-control-center",
@@ -33,6 +33,17 @@ Last-Update: 2024-12-13
 +exclude = [
 +    "vendor/",
 +]
- 
+
  [workspace.dependencies]
  tokio = { version = "^1.39.0", default-features = false, features = [
+@@ -97,3 +100,10 @@ opt-level = 3
+ version = "1"
+ default-features = false
+ features = ["user-hooks"]
++
++[patch.'https://github.com/slint-ui/slint']
++slint = { version = "1.8" }
++slint-build = { version = "1.8" }
++
++[patch.'https://gitlab.com/asus-linux/supergfxctl']
++supergfxctl = { version = "5.2.4" }
