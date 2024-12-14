@@ -1,3 +1,9 @@
+asusctl (6.0.12-7) oracular; urgency=medium
+
+  * Fix incorrect /usr/share/asusd install location
+
+ -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Sat, 14 Dec 2024 09:11:00 -0600
+
 asusctl (6.0.12-6) oracular; urgency=medium
 
   * Add libinput, libgbm dependency

@@ -3,5 +3,5 @@ usr/bin/asusd-user usr/bin
 usr/lib/systemd/system/asusd.service usr/lib/systemd/system
 usr/lib/systemd/user/asusd-user.service usr/lib/systemd/user
 usr/lib/udev/rules.d/99-asusd.rules usr/lib/udev/rules.d
-usr/share/asusd/* usr/share
+usr/share/asusd/* usr/share/asusd
 usr/share/dbus-1/system.d/asusd.conf usr/share/dbus-1/system.d
