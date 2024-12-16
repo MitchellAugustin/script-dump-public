@@ -1,7 +1,7 @@
 From 1286da7691ad9780b8d1e3c6782faea2c9d549dd Mon Sep 17 00:00:00 2001
 From: Mitchell Augustin <mitchell.augustin@canonical.com>
 Date: Wed, 4 Dec 2024 13:39:20 -0600
-Subject: [PATCH] PCI: Add decode disable/enable to device level and separate
+Subject: [PATCH v2] PCI: Add decode disable/enable to device level and separate
  BAR info logging into separate function
 
 In a virtualized environment with PCI devices passed-through,
