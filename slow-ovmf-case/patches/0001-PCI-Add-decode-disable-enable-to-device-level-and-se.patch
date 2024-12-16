@@ -25,6 +25,12 @@ __pci_read_base() through which the caller can access
 necessary data from __pci_read_base() and pass it to
 __pci_print_bar_status().
 
+Link: https://lore.kernel.org/all/CAHTA-uYp07FgM6T1OZQKqAdSA5JrZo0ReNEyZgQZub4mDRrV5w@mail.gmail.com/
+Reported-by: "Mitchell Augustin" <mitchell.augustin@canonical.com>
+Closes: https://lore.kernel.org/all/CAHTA-uYp07FgM6T1OZQKqAdSA5JrZo0ReNEyZgQZub4mDRrV5w@mail.gmail.com/
+Tested-by: "Mitchell Augustin" <mitchell.augustin@canonical.com>
+Signed-off-by: "Mitchell Augustin" <mitchell.augustin@canonical.com>
+---
 This has been tested on an SR670v2 host and guest VM,
 a DGX H100 host and guest VM, and a DGX A100 host and guest
 VM. I confirmed that BAR info logged to dmesg was consistent
@@ -36,11 +42,8 @@ Nvidia driver loads as expected with the patch, and that
 VM boot time with cold-plugged, passed-through GPUs is about
 2x faster. No regressions were observed.
 
-Link: https://lore.kernel.org/all/CAHTA-uYp07FgM6T1OZQKqAdSA5JrZo0ReNEyZgQZub4mDRrV5w@mail.gmail.com/
-Reported-by: "Mitchell Augustin" <mitchell.augustin@canonical.com>
-Closes: https://lore.kernel.org/all/CAHTA-uYp07FgM6T1OZQKqAdSA5JrZo0ReNEyZgQZub4mDRrV5w@mail.gmail.com/
-Tested-by: "Mitchell Augustin" <mitchell.augustin@canonical.com>
-Signed-off-by: "Mitchell Augustin" <mitchell.augustin@canonical.com>
+v2 of this patch removes unnecessary whitespace.
+
 ---
  drivers/pci/iov.c   |  16 ++++-
  drivers/pci/pci.h   |   7 ++-
