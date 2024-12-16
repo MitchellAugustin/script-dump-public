@@ -1,10 +1,15 @@
-From 5dc2eb5a47d3790a3926e87234ef24ed636124a4 Mon Sep 17 00:00:00 2001
+From 1286da7691ad9780b8d1e3c6782faea2c9d549dd Mon Sep 17 00:00:00 2001
 From: Mitchell Augustin <mitchell.augustin@canonical.com>
 Date: Wed, 4 Dec 2024 13:39:20 -0600
-Subject: [PATCH 1/1] PCI: Add decode disable/enable to device level and
- separate BAR info logging into separate function
+Subject: [PATCH] PCI: Add decode disable/enable to device level and separate
+ BAR info logging into separate function
 
-Add an additional decode disable/enable mask at the device
+In a virtualized environment with PCI devices passed-through,
+disabling and enabling decoding is not trivial, and in some
+configurations can take up to 2 seconds of wall clock time to
+complete. Since this operation could be done once around each
+device for devices with multiple BARs (reducing redundancy),
+add an additional decode disable/enable mask at the device
 level to prevent redundant disable/enables from occurring
 during each BAR sizing operation, when pci_read_bases() is
 the originator.
@@ -20,6 +25,17 @@ __pci_read_base() through which the caller can access
 necessary data from __pci_read_base() and pass it to
 __pci_print_bar_status().
 
+This has been tested on an SR670v2 host and guest VM,
+a DGX H100 host and guest VM, and a DGX A100 host and guest
+VM. I confirmed that BAR info logged to dmesg was consistent
+on each between unmodified 6.12.1 and with this patch, that
+BAR mappings in /proc/iomem were consistent between
+versions, and that lspci -vv results were consistent
+between versions. On the A100/H100, I also confirmed that the
+Nvidia driver loads as expected with the patch, and that
+VM boot time with cold-plugged, passed-through GPUs is about
+2x faster. No regressions were observed.
+
 Link: https://lore.kernel.org/all/CAHTA-uYp07FgM6T1OZQKqAdSA5JrZo0ReNEyZgQZub4mDRrV5w@mail.gmail.com/
 Reported-by: "Mitchell Augustin" <mitchell.augustin@canonical.com>
 Closes: https://lore.kernel.org/all/CAHTA-uYp07FgM6T1OZQKqAdSA5JrZo0ReNEyZgQZub4mDRrV5w@mail.gmail.com/
@@ -28,8 +44,8 @@ Signed-off-by: "Mitchell Augustin" <mitchell.augustin@canonical.com>
 ---
  drivers/pci/iov.c   |  16 ++++-
  drivers/pci/pci.h   |   7 ++-
- drivers/pci/probe.c | 149 +++++++++++++++++++++++++++++++++++++++++---
- 3 files changed, 158 insertions(+), 14 deletions(-)
+ drivers/pci/probe.c | 144 +++++++++++++++++++++++++++++++++++++++++---
+ 3 files changed, 153 insertions(+), 14 deletions(-)
 
 diff --git a/drivers/pci/iov.c b/drivers/pci/iov.c
 index 4be402fe9ab9..e8cbd67c9001 100644
@@ -86,7 +102,7 @@ index 2e40fc63ba31..d47f297a2401 100644
  void __pci_bus_size_bridges(struct pci_bus *bus,
  			struct list_head *realloc_head);
 diff --git a/drivers/pci/probe.c b/drivers/pci/probe.c
-index 2e81ab0f5a25..8984bb4ca53a 100644
+index 2e81ab0f5a25..3b566b2691d2 100644
 --- a/drivers/pci/probe.c
 +++ b/drivers/pci/probe.c
 @@ -170,17 +170,24 @@ static inline unsigned long decode_bar(struct pci_dev *dev, u32 bar)
@@ -116,7 +132,7 @@ index 2e81ab0f5a25..8984bb4ca53a 100644
  
  	mask = type ? PCI_ROM_ADDRESS_MASK : ~0;
  
-@@ -247,15 +254,19 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+@@ -247,6 +254,10 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
  		mask64 |= ((u64)~0 << 32);
  	}
  
@@ -127,9 +143,7 @@ index 2e81ab0f5a25..8984bb4ca53a 100644
  	if (!dev->mmio_always_on && (orig_cmd & PCI_COMMAND_DECODE_ENABLE))
  		pci_write_config_word(dev, PCI_COMMAND, orig_cmd);
  
-+
- 	if (!sz64)
- 		goto fail;
+@@ -255,7 +266,6 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
  
  	sz64 = pci_size(l64, sz64, mask64);
  	if (!sz64) {
@@ -137,7 +151,7 @@ index 2e81ab0f5a25..8984bb4ca53a 100644
  		goto fail;
  	}
  
-@@ -265,8 +276,6 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+@@ -265,8 +275,6 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
  			res->flags |= IORESOURCE_UNSET | IORESOURCE_DISABLED;
  			res->start = 0;
  			res->end = 0;
@@ -146,7 +160,7 @@ index 2e81ab0f5a25..8984bb4ca53a 100644
  			goto out;
  		}
  
-@@ -275,8 +284,6 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+@@ -275,8 +283,6 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
  			res->flags |= IORESOURCE_UNSET;
  			res->start = 0;
  			res->end = sz64 - 1;
@@ -155,7 +169,7 @@ index 2e81ab0f5a25..8984bb4ca53a 100644
  			goto out;
  		}
  	}
-@@ -298,12 +305,83 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
+@@ -298,12 +304,83 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
  	 * If it doesn't, CPU accesses to "bus_to_resource(A)" will not
  	 * be claimed by the device.
  	 */
@@ -240,13 +254,7 @@ index 2e81ab0f5a25..8984bb4ca53a 100644
  	}
  
  	goto out;
-@@ -316,11 +394,24 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
- 		pci_info(dev, "%s %pR\n", res_name, res);
- 
- 	return (res->flags & IORESOURCE_MEM_64) ? 1 : 0;
-+
- }
- 
+@@ -321,6 +398,18 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
  static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
  {
  	unsigned int pos, reg;
@@ -265,7 +273,7 @@ index 2e81ab0f5a25..8984bb4ca53a 100644
  
  	if (dev->non_compliant_bars)
  		return;
-@@ -329,19 +420,57 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
+@@ -329,18 +418,53 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
  	if (dev->is_virtfn)
  		return;
  
@@ -278,16 +286,17 @@ index 2e81ab0f5a25..8984bb4ca53a 100644
 +		}
 +	}
 +
-+	for (pos = 0; pos < howmany; pos++) {
-+		struct resource *res = &dev->resource[pos];
+ 	for (pos = 0; pos < howmany; pos++) {
+ 		struct resource *res = &dev->resource[pos];
 +
-+		reg = PCI_BASE_ADDRESS_0 + (pos << 2);
+ 		reg = PCI_BASE_ADDRESS_0 + (pos << 2);
+-		pos += __pci_read_base(dev, pci_bar_unknown, res, reg);
 +		pos += __pci_read_base(dev, pci_bar_unknown, res, reg,
 +				sz64s, l64s, mask64s, ls, region_matches, pos);
-+	}
-+
-+	if (rom) {
-+		struct resource *res = &dev->resource[PCI_ROM_RESOURCE];
+ 	}
+ 
+ 	if (rom) {
+ 		struct resource *res = &dev->resource[PCI_ROM_RESOURCE];
 +
 +		dev->rom_base_reg = rom;
 +		res->flags = IORESOURCE_MEM | IORESOURCE_PREFETCH |
@@ -299,18 +308,16 @@ index 2e81ab0f5a25..8984bb4ca53a 100644
 +	if (!dev->mmio_always_on && (orig_cmd & PCI_COMMAND_DECODE_ENABLE))
 +		pci_write_config_word(dev, PCI_COMMAND, orig_cmd);
 +
++	for (pos = 0; pos < howmany; pos++) {
++		struct resource *res = &dev->resource[pos];
 +
- 	for (pos = 0; pos < howmany; pos++) {
- 		struct resource *res = &dev->resource[pos];
-+
- 		reg = PCI_BASE_ADDRESS_0 + (pos << 2);
--		pos += __pci_read_base(dev, pci_bar_unknown, res, reg);
++		reg = PCI_BASE_ADDRESS_0 + (pos << 2);
 +		pos += __pci_print_bar_status(dev, pci_bar_unknown, res, reg,
 +				sz64s[pos], l64s[pos], mask64s[pos], ls[pos], region_matches[pos]);
- 	}
- 
- 	if (rom) {
- 		struct resource *res = &dev->resource[PCI_ROM_RESOURCE];
++	}
++
++	if (rom) {
++		struct resource *res = &dev->resource[PCI_ROM_RESOURCE];
 +
  		dev->rom_base_reg = rom;
  		res->flags = IORESOURCE_MEM | IORESOURCE_PREFETCH |
@@ -320,11 +327,8 @@ index 2e81ab0f5a25..8984bb4ca53a 100644
 +				romsz64[0], roml64[0], rommask64[0], roml[0],
 +				rom_region_matches[0]);
  	}
-+
-+
  }
  
- static void pci_read_bridge_io(struct pci_dev *dev, struct resource *res,
 -- 
 2.43.0
 
