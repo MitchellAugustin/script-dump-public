@@ -1,58 +1,5 @@
-asusctl (6.0.12-7) oracular; urgency=medium
-
-  * Fix incorrect /usr/share/asusd install location
-
- -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Sat, 14 Dec 2024 09:11:00 -0600
-
-asusctl (6.0.12-6) oracular; urgency=medium
-
-  * Add libinput, libgbm dependency
-
- -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Fri, 13 Dec 2024 17:41:00 -0600
-
-asusctl (6.0.12-5) oracular; urgency=medium
-
-  * Add libseat dependency
-
- -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Fri, 13 Dec 2024 17:07:00 -0600
-
-
-asusctl (6.0.12-4) oracular; urgency=medium
-
-  * Re-add XS-Vendored-Sources-Rust entries and tarball
-
- -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Fri, 13 Dec 2024 16:44:00 -0600
-
-asusctl (6.0.12-3) oracular; urgency=medium
-
-  * Remove XS-Vendored-Sources-Rust entries
-
- -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Fri, 13 Dec 2024 16:19:00 -0600
-
-
-asusctl (6.0.12-2) oracular; urgency=medium
-
-  * Adjust patch to correctly handle git-provided repos
-  * Remove redundant untar
-
- -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Fri, 13 Dec 2024 16:03:00 -0600
-
-
-asusctl (6.0.12-1) oracular; urgency=medium
-
-  * Change dh-cargo-tools build-dep to dh-cargo
-
- -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Fri, 13 Dec 2024 14:54:00 -0600
-
-asusctl (6.0.12-0) oracular; urgency=medium
-
-  * Fix incorrect cargo binary location
-  * Fix dependencies between asusctl, asusd, rog-control-center
-
- -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Fri, 13 Dec 2024 13:25:00 -0600
-
 asusctl (6.0.12) oracular; urgency=medium
 
   * New upstream release.
 
- -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Wed, 11 Dec 2024 10:45:00 -0600
+ -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Tue, 17 Dec 2024 17:08:00 -0600

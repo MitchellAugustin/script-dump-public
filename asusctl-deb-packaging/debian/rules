@@ -12,7 +12,7 @@ include /usr/share/dpkg/default.mk
 include /usr/share/rustc/architecture.mk
 export DEB_HOST_RUST_TYPE DEB_HOST_GNU_TYPE
 
-VENDOR_TARBALL = asusctl_$(DEB_VERSION_UPSTREAM).orig-$(CARGO_VENDOR_DIR).tar.gz
+VENDOR_TARBALL = asusctl_$(DEB_VERSION_UPSTREAM).orig-$(CARGO_VENDOR_DIR).tar.xz
 
 vendor-tarball-sanity-check:
 	if [ -e ../$(VENDOR_TARBALL) ]; then echo "../$(VENDOR_TARBALL) already exists, bailing!"; exit 1; fi
@@ -60,8 +60,7 @@ vendor-tarball: vendor-tarball-sanity-check vendor-deps
 	dh $@
 
 override_dh_auto_configure:
-	mkdir $(CARGO_VENDOR_DIR)
-	tar -xvf ../$(VENDOR_TARBALL) -C $(CARGO_VENDOR_DIR)
+	tar -xvf ../$(VENDOR_TARBALL) -C .
 	DEB_CARGO_CRATE=asusctl_$(shell dpkg-parsechangelog --show-field Version) \
 	$(CARGO) prepare-debian $(CARGO_VENDOR_DIR)
 	/usr/share/cargo/bin/dh-cargo-vendored-sources

@@ -44,7 +44,7 @@ Depends:
  ${misc:Depends},
  ${shlibs:Depends}
 Description: Daemon that enables communication between userland components such as asusctl and kernel features
- This package contains asusd, the daemon and dbus interface
+ This package contains asusd, the daemon and dbus interface.
 
 Package: rog-control-center
 Architecture: amd64
@@ -54,6 +54,14 @@ Depends:
  asusd,
  ${misc:Depends},
  ${shlibs:Depends}
-Description: GUI for controlling ASUS hardware
- This package contains the GUI 
+Description: GUI for controlling ASUS hardware via asusd
+ This package contains the GUI for controlling asus hardware via asusd.
+ .
+ Features:
+ * Keyboard lighting: Whether your keyboard only has single zone or per-key RGB, you can get your favourite setting in just a few clicks
+ * AniMe Matrix: If your notebook has an AniMe Matrix display, you can configure awesome custom animations to express yourself
+ * Custom Fan Curves: Customise your fan curves based on profile, so you always have your preferred balance between fan noise and temperature
+ * Easy Graphics Switching: Quickly switch between graphics modes - it's never been easier to switch between integrated and dedicated graphics
+ * Dedicated VFIO Mode: If passing your GPU to a virtual machine is your idea of fun, our unique VFIO mode makes it easy to toggle - no more hardcoded kernel parameters!
+ * AC Power Commands: With asusctl you can assign commands or scripts that run when either the system is connected or disconnected from AC power
 
