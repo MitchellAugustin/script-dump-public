@@ -34,6 +34,7 @@ vendor-deps:
 		$(CARGO_VENDOR_DIR)/winapi-* \
 		$(CARGO_VENDOR_DIR)/windows-* \
 		$(CARGO_VENDOR_DIR)/windows_* \
+		$(CARGO_VENDOR_DIR)/libloading/tests/*.dll \
 		# End of list
 	# Remove the C sources from the binding crates, we're using the system libs
 	rm -r \

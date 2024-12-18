@@ -1,0 +1,16 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Source: https://gitlab.com/asus-linux/asusctl
+Upstream-Name: asusctl
+Upstream-Contact: Luke Jones <luke@ljones.dev>
+
+Files: *
+Copyright: 2024 Luke Jones <luke@ljones.dev>
+License: MPL-2.0
+
+Files: debian/*
+Copyright: 2024 Mitchell Augustin <mitchell@mitchellaugustin.com>
+License: MPL-2.0
+
+License: MPL-2.0
+ /usr/share/common-licenses/MPL-2.0
+

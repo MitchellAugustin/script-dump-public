@@ -1,5 +1,5 @@
-asusctl (6.0.12) oracular; urgency=medium
+asusctl (6.0.12-1) oracular; urgency=medium
 
-  * New upstream release.
+  * New Debian release (closes: #1090750)
 
- -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Tue, 17 Dec 2024 17:08:00 -0600
+ -- Mitchell Augustin <mitchell@mitchellaugustin.com>  Wed, 18 Dec 2024 11:48:00 -0600
