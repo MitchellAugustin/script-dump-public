@@ -1,7 +1,7 @@
-From 1286da7691ad9780b8d1e3c6782faea2c9d549dd Mon Sep 17 00:00:00 2001
+From 516dcab94a727d6c031e990532c247ce228f7744 Mon Sep 17 00:00:00 2001
 From: Mitchell Augustin <mitchell.augustin@canonical.com>
-Date: Wed, 4 Dec 2024 13:39:20 -0600
-Subject: [PATCH v2] PCI: Add decode disable/enable to device level and separate
+Date: Wed, 18 Dec 2024 15:57:20 -0600
+Subject: [PATCH v3] PCI: Add decode disable/enable to device level and separate
  BAR info logging into separate function
 
 In a virtualized environment with PCI devices passed-through,
@@ -42,7 +42,10 @@ Nvidia driver loads as expected with the patch, and that
 VM boot time with cold-plugged, passed-through GPUs is about
 2x faster. No regressions were observed.
 
-v2 of this patch removes unnecessary whitespace.
+v2 of this patch removes unnecessary whitespace
+v3 of this patch makes the stashed rom variables more idiomatic
+as pointers rather than single-element arrays and fixes
+some strict lint errors
 
 ---
  drivers/pci/iov.c   |  16 ++++-
@@ -80,14 +83,14 @@ index 4be402fe9ab9..e8cbd67c9001 100644
 +						pos + PCI_SRIOV_BAR + i * 4,
 +						sz64s, l64s, mask64s, ls, region_matches, i);
 +			__pci_print_bar_status(dev, pci_bar_unknown, res,
-+					pos + PCI_SRIOV_BAR + i * 4,
++					       pos + PCI_SRIOV_BAR + i * 4,
 +					sz64s[i], l64s[i], mask64s[i], ls[i], region_matches[i]);
 +		}
  		if (!res->flags)
  			continue;
  		if (resource_size(res) & (PAGE_SIZE - 1)) {
 diff --git a/drivers/pci/pci.h b/drivers/pci/pci.h
-index 2e40fc63ba31..d47f297a2401 100644
+index 2e40fc63ba31..afe42a6f7e18 100644
 --- a/drivers/pci/pci.h
 +++ b/drivers/pci/pci.h
 @@ -316,7 +316,12 @@ int pci_idt_bus_quirk(struct pci_bus *bus, int devfn, u32 *pl, int rrs_timeout);
@@ -99,13 +102,13 @@ index 2e40fc63ba31..d47f297a2401 100644
 +		u64 *sz64s, u64 *l64s, u64 *mask64s, u32 *ls,
 +		bool *region_matches, unsigned int bar_idx);
 +int __pci_print_bar_status(struct pci_dev *dev, enum pci_bar_type type,
-+		struct resource *res, unsigned int pos,
-+		u64 sz64, u64 l64, u64 mask64, u32 l, bool region_match);
++			   struct resource *res, unsigned int pos,
++			u64 sz64, u64 l64, u64 mask64, u32 l, bool region_match);
  void pci_configure_ari(struct pci_dev *dev);
  void __pci_bus_size_bridges(struct pci_bus *bus,
  			struct list_head *realloc_head);
 diff --git a/drivers/pci/probe.c b/drivers/pci/probe.c
-index 2e81ab0f5a25..3b566b2691d2 100644
+index 2e81ab0f5a25..a07c231835c6 100644
 --- a/drivers/pci/probe.c
 +++ b/drivers/pci/probe.c
 @@ -170,17 +170,24 @@ static inline unsigned long decode_bar(struct pci_dev *dev, u32 bar)
@@ -209,8 +212,8 @@ index 2e81ab0f5a25..3b566b2691d2 100644
 + * Returns 1 if the BAR is 64-bit, or 0 if 32-bit.
 + */
 +int __pci_print_bar_status(struct pci_dev *dev, enum pci_bar_type type,
-+		struct resource *res, unsigned int pos,
-+		u64 sz64, u64 l64, u64 mask64, u32 l, bool region_match)
++			   struct resource *res, unsigned int pos,
++				u64 sz64, u64 l64, u64 mask64, u32 l, bool region_match)
 +{
 +	const char *res_name = pci_resource_name(dev, res - dev->resource);
 +
@@ -224,8 +227,8 @@ index 2e81ab0f5a25..3b566b2691d2 100644
 +	}
 +
 +	if (res->flags & IORESOURCE_MEM_64) {
-+		if ((sizeof(pci_bus_addr_t) < 8 || sizeof(resource_size_t) < 8)
-+		    && sz64 > 0x100000000ULL) {
++		if ((sizeof(pci_bus_addr_t) < 8 || sizeof(resource_size_t) < 8) &&
++		    sz64 > 0x100000000ULL) {
 +			pci_err(dev, "%s: can't handle BAR larger than 4GB (size %#010llx)\n",
 +				res_name, (unsigned long long)sz64);
 +			goto out;
@@ -268,11 +271,11 @@ index 2e81ab0f5a25..3b566b2691d2 100644
 +	bool region_matches[PCI_STD_NUM_BARS] = { 0 };
 +	u16 orig_cmd;
 +
-+	u64 romsz64[1] = { 0 };
-+	u64 roml64[1] = { 0 };
-+	u32 roml[1] = { 0 };
-+	u64 rommask64[1] = { 0 };
-+	bool rom_region_matches[1] = { 0 };
++	u64 romsz64 = 0;
++	u64 roml64 = 0;
++	u32 roml = 0;
++	u64 rommask64 = 0;
++	bool rom_region_matches = 0;
  
  	if (dev->non_compliant_bars)
  		return;
@@ -285,7 +288,7 @@ index 2e81ab0f5a25..3b566b2691d2 100644
 +		pci_read_config_word(dev, PCI_COMMAND, &orig_cmd);
 +		if (orig_cmd & PCI_COMMAND_DECODE_ENABLE) {
 +			pci_write_config_word(dev, PCI_COMMAND,
-+				orig_cmd & ~PCI_COMMAND_DECODE_ENABLE);
++					      orig_cmd & ~PCI_COMMAND_DECODE_ENABLE);
 +		}
 +	}
 +
@@ -305,7 +308,7 @@ index 2e81ab0f5a25..3b566b2691d2 100644
 +		res->flags = IORESOURCE_MEM | IORESOURCE_PREFETCH |
 +				IORESOURCE_READONLY | IORESOURCE_SIZEALIGN;
 +		__pci_read_base(dev, pci_bar_mem32, res, rom,
-+				romsz64, roml64, rommask64, roml, rom_region_matches, 0);
++				&romsz64, &roml64, &rommask64, &roml, &rom_region_matches, 0);
 +	}
 +
 +	if (!dev->mmio_always_on && (orig_cmd & PCI_COMMAND_DECODE_ENABLE))
@@ -327,8 +330,8 @@ index 2e81ab0f5a25..3b566b2691d2 100644
  				IORESOURCE_READONLY | IORESOURCE_SIZEALIGN;
 -		__pci_read_base(dev, pci_bar_mem32, res, rom);
 +		__pci_print_bar_status(dev, pci_bar_mem32, res, rom,
-+				romsz64[0], roml64[0], rommask64[0], roml[0],
-+				rom_region_matches[0]);
++				       romsz64, roml64, rommask64, roml,
++				rom_region_matches);
  	}
  }
  
