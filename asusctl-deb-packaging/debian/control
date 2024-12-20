@@ -30,7 +30,7 @@ Package: asusctl
 Architecture: amd64
 Priority: important
 Depends:
- asusd,
+ asusd (= 6.0.12-2),
  ${misc:Depends},
  ${shlibs:Depends}
 Description: Control fan speeds, LEDs, graphics modes, and charge levels for ASUS notebooks
@@ -51,8 +51,8 @@ Package: rog-control-center
 Architecture: amd64
 Priority: important
 Depends:
- asusctl,
- asusd,
+ asusctl (= 6.0.12-2),
+ asusd (= 6.0.12-2),
  ${misc:Depends},
  ${shlibs:Depends}
 Description: GUI for controlling ASUS hardware via asusd
