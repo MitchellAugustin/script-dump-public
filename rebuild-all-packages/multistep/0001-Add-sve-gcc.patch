@@ -1,0 +1,28 @@
+From c948abc4bb10fbc1c3f53ebb1e07b9debfb0d8e5 Mon Sep 17 00:00:00 2001
+From: Mitchell Augustin <mitchell.augustin@canonical.com>
+Date: Tue, 21 Jan 2025 20:22:45 +0000
+Subject: [PATCH] Add sve
+
+---
+ debian/rules2 | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/debian/rules2 b/debian/rules2
+index fa5df32..40d8f07 100644
+--- a/debian/rules2
++++ b/debian/rules2
+@@ -680,6 +680,11 @@ ifneq (,$(filter $(DEB_TARGET_ARCH), amd64 i386))
+   endif
+ endif
+ 
++ifeq ($(DEB_TARGET_ARCH),arm64)
++  CONFARGS += --with-arch-64=armv8.2-a+sve
++endif
++
++
+ ifeq ($(DEB_TARGET_ARCH),amd64)
+   CONFARGS += --with-abi=m64
+ endif
+-- 
+2.45.2
+
