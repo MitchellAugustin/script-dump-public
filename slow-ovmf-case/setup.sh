@@ -1,4 +1,4 @@
-wget https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
+wget https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
 
 sudo apt remove -y nvidia-utils-*-server linux-modules-nvidia-*-server-open-nvidia nvidia-compute-utils-*-server nvidia-fabricmanager-* nvidia-firmware-*-server-* nvidia-kernel-common-*-server nvidia-kernel-source-*-server-open
 sudo apt update
