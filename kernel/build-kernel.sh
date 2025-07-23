@@ -38,4 +38,7 @@ sudo mkinitramfs -o /boot/initrd.img-${krel} "$krel"
 #sudo ln -sf "initrd.img-${krel}" /boot/initrd.img-update
 #sudo ln -sf "config-${krel}" /boot/config-update
 sudo update-grub
+#sudo dkms uninstall -m nvidia/5XX.XX -k ${krel} --force
+#sudo dkms build -m nvidia/5XX.XX -k ${krel} --force
+#sudo dkms install -m nvidia/5XX.XX -k ${krel} --force
 #sudo reboot
