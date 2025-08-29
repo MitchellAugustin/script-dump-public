@@ -1,12 +1,11 @@
 [Unit]
 Description=Bluetooth Profile Transition Monitor
-# Wait for the graphical session to be ready
-After=graphical-session.target
+After=default.target
 
 [Service]
 ExecStart=/usr/local/bin/bluetooth-profile-transition-monitor
 Restart=always
 
 [Install]
-# Hook into the graphical session
-WantedBy=graphical-session.target
+WantedBy=default.target
+
