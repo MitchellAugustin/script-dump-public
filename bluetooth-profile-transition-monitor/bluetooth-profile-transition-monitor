@@ -1,0 +1,92 @@
+#!/bin/bash
+
+# Watch the pactl event stream for bluetooth_output device removals.
+# When a Bluetooth sink is removed, if the BT device is still present
+# according to dbus, we assume that a profile switch is happening
+# and mute the fallback device for 3 seconds.
+# If the dbus device and bluetooth_output go offline at the same time,
+# we assume this is a permanent disconnection and do not mute anything.
+
+# Returns a list of currently active bluetooth sink names.
+get_bluetooth_sinks() {
+  pactl list sinks short | grep -o 'bluez_output[^[:space:]]*'
+}
+
+# Checks if a Bluetooth device is still connected via D-Bus.
+# Arg1: The full sink name (e.g., bluez_output.C0_28_8D_6A_57_84.a2dp_sink)
+# Returns 0 (success) if connected, 1 (failure) if not connected or not found.
+is_bt_device_connected() {
+    local sink_name=$1
+    # Extract MAC address from the sink name
+    local mac_address
+    mac_address=$(echo "$sink_name" | cut -d'.' -f2)
+    
+    if [[ -z "$mac_address" ]]; then
+        return 1
+    fi
+
+    # Construct the D-Bus object path for the bluetooth device.
+    # Note: Assumes the adapter is hci0, which is nearly always the case.
+    local dbus_path="/org/bluez/hci0/dev_$(echo "$mac_address" | tr ':' '_')"
+
+    # Query the 'Connected' property using busctl. Redirect stderr to hide
+    # errors if the device path doesn't exist (i.e., it's already gone).
+    local connected_status
+    connected_status=$(busctl --system get-property org.bluez "$dbus_path" org.bluez.Device1 Connected 2>/dev/null)
+
+    # Check the output. 'b true' means connected.
+    if [[ "$connected_status" == "b true" ]]; then
+        return 0 # It's still connected
+    else
+        return 1 # It's disconnected
+    fi
+}
+
+
+# Get the initial list of connected bluetooth sinks
+known_bt_sinks=$(get_bluetooth_sinks)
+
+echo "Listening for audio events..."
+
+# Subscribe to pulseaudio events
+pactl subscribe | while read -r event; do
+  # We only care about events that might signal a device change.
+  if [[ "$event" == *"on sink"* || "$event" == *"on server"* ]]; then
+    current_bt_sinks=$(get_bluetooth_sinks)
+
+    # Check if any previously known sink has disappeared.
+    for sink in $known_bt_sinks; do
+      if ! echo "$current_bt_sinks" | grep -q -w "$sink"; then
+        echo "Bluetooth sink '$sink' removed."
+
+        # When removed, check D-Bus to try and intuit the reason 
+        if is_bt_device_connected "$sink"; then
+          # If the device is still connected, assume this is a profile switch.
+          echo "Device is still connected. Assuming profile switch."
+
+          fallback_sink_to_mute=$(pactl get-default-sink)
+
+          if [[ -n "$fallback_sink_to_mute" ]]; then
+            echo "Muting new default sink ('$fallback_sink_to_mute') for 3 seconds..."
+            pactl set-sink-mute "$fallback_sink_to_mute" 1
+            sleep 3
+            pactl set-sink-mute "$fallback_sink_to_mute" 0
+            echo "Unmuted sink '$fallback_sink_to_mute'."
+          else
+            echo "Could not identify the new default sink. Skipping mute."
+          fi
+        else
+          # If the device is also gone, assume this is a permanent disconnect.
+          echo "Device has disconnected permanently. No action taken."
+        fi
+
+        # Assume that only one such event is happening per `pactl subscribe` output
+        break
+      fi
+    done
+
+    # Update the list of known sinks for the next event.
+    known_bt_sinks=$current_bt_sinks
+  fi
+done
+
