@@ -1,0 +1,1 @@
+@reboot root sleep 60 && /usr/local/bin/initramfs-bench.sh >>/var/log/initramfs-bench.log 2>&1
