@@ -61,6 +61,8 @@ run_connectivity_check() {
     nmcli connection down "$conn_id"
 }
 
+echo "Action logged on $CONNECTION_ID on $INTERFACE: $ACTION" | logger -t "$LOGGER_TAG"
+
 # --- Dispatcher Entry Point ---
 # We only care about the 'up' action.
 if [ "$ACTION" = "up" ]; then
